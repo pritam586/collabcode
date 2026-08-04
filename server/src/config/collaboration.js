@@ -1,6 +1,8 @@
 export const SUPPORTED_LANGUAGES = new Set([
   'javascript',
   'typescript',
+  'java',
+  'cpp',
   'python',
   'json',
   'css',

@@ -1,6 +1,8 @@
 export const LANGUAGES = [
   ['javascript', 'JavaScript', 'js'],
   ['typescript', 'TypeScript', 'ts'],
+  ['java', 'Java', 'java'],
+  ['cpp', 'C++', 'cpp'],
   ['python', 'Python', 'py'],
   ['json', 'JSON', 'json'],
   ['css', 'CSS', 'css'],

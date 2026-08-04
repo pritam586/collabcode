@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { socket } from '../socket.js';
 import { applyDeltaToText, createMinimalDelta } from '../utils/monacoDeltaAdapter.js';
+import { runCompiledCode } from '../utils/codeRunner.js';
 
 const validColors = new Set(['violet', 'cyan', 'amber', 'rose', 'lime', 'sky']);
 
@@ -55,12 +56,18 @@ export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCurs
   const runCurrentCode = useCallback(() => {
     onOutputVisibilityChange(true);
     const code = editorRef.current?.getValue() || '';
-    if (room.language !== 'javascript') {
-      setRunOutput([{ type: 'error', text: `Run Code currently supports JavaScript. Switch the language from ${room.language} to JavaScript to execute this file.` }]);
-      return;
-    }
     if (!code.trim()) {
       setRunOutput([{ type: 'muted', text: 'Nothing to run yet.' }]);
+      return;
+    }
+
+    if (room.language === 'java' || room.language === 'cpp') {
+      runNativeCode(room.language, code);
+      return;
+    }
+
+    if (room.language !== 'javascript') {
+      setRunOutput([{ type: 'error', text: `Run Code supports JavaScript, Java, and C++. ${room.language} is currently editor-only.` }]);
       return;
     }
 
@@ -68,6 +75,20 @@ export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCurs
     setRunnerSource(createRunnerDocument(code));
     setRunnerKey((current) => current + 1);
   }, [onOutputVisibilityChange, room.language]);
+
+  async function runNativeCode(language, code) {
+    setRunOutput([{ type: 'muted', text: `Compiling ${language === 'cpp' ? 'C++' : 'Java'} in an isolated container...` }]);
+    try {
+      const result = await runCompiledCode(language, code);
+      const output = [
+        ...(result.stdout ? [{ type: 'log', text: result.stdout }] : []),
+        ...(result.stderr ? [{ type: 'error', text: result.stderr }] : []),
+      ];
+      setRunOutput(output.length > 0 ? output : [{ type: 'muted', text: 'Program completed with no output.' }]);
+    } catch (error) {
+      setRunOutput([{ type: 'error', text: error.message || 'The native code runner failed.' }]);
+    }
+  }
 
   useEffect(() => {
     if (runRequest <= lastRunRequestRef.current) return;

@@ -2,12 +2,15 @@
 
 A focused real-time collaborative code editor built with React, Monaco Editor, Express, and Socket.io.
 
-The **Run code** button executes JavaScript in a sandboxed browser frame and shows `console.log` output or runtime errors below the editor. The runner intentionally executes in the browser rather than on the Node server, so collaborators cannot run arbitrary processes on the host machine. Other language modes remain available for editing and highlighting.
+The **Run code** button executes JavaScript in a sandboxed browser frame and shows `console.log` output or runtime errors below the editor. Java and C++ execute in a resource-limited Docker container with network access disabled. Other language modes remain available for editing and highlighting.
 
 ## Requirements
 
 - Node.js 20 or newer
 - npm 10 or newer
+- Docker Desktop, running locally, for Java and C++ execution
+
+Install Docker Desktop from [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/), start it, then restart the CollabCode server. The first Java or C++ execution downloads the required compiler image. Java submissions must declare their entry class as `Main`; C++ submissions need a standard `int main()` entry point.
 
 ## Run locally
 

@@ -4,6 +4,7 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { registerSocketHandlers } from './socket/index.js';
+import { registerRunRoute } from './routes/runRoute.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -18,9 +19,11 @@ app.use((_request, response, next) => {
 });
 
 app.use(cors({ origin: clientOrigin }));
+app.use(express.json({ limit: '110kb' }));
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' });
 });
+registerRunRoute(app);
 
 const io = new Server(httpServer, {
   maxHttpBufferSize: 110_000,
