@@ -61,13 +61,13 @@ export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCurs
       return;
     }
 
-    if (room.language === 'java' || room.language === 'cpp') {
+    if (room.language === 'java' || room.language === 'cpp' || room.language === 'python' || room.language === 'typescript') {
       runNativeCode(room.language, code);
       return;
     }
 
     if (room.language !== 'javascript') {
-      setRunOutput([{ type: 'error', text: `Run Code supports JavaScript, Java, and C++. ${room.language} is currently editor-only.` }]);
+      setRunOutput([{ type: 'error', text: `Run Code supports JavaScript, TypeScript, Java, Python, and C++. ${room.language} is currently editor-only.` }]);
       return;
     }
 
@@ -77,7 +77,8 @@ export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCurs
   }, [onOutputVisibilityChange, room.language]);
 
   async function runNativeCode(language, code) {
-    setRunOutput([{ type: 'muted', text: `Compiling ${language === 'cpp' ? 'C++' : 'Java'} in an isolated container...` }]);
+    const languageLabel = language === 'cpp' ? 'C++' : language === 'python' ? 'Python' : language === 'typescript' ? 'TypeScript' : 'Java';
+    setRunOutput([{ type: 'muted', text: `Running ${languageLabel} in an isolated container...` }]);
     try {
       const result = await runCompiledCode(language, code);
       const output = [

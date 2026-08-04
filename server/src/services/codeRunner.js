@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const RUN_TIMEOUT_MS = 5_000;
+const RUN_TIMEOUT_MS = 120_000;
 const MAX_OUTPUT_LENGTH = 16_000;
 const MAX_RUN_CODE_LENGTH = 25_000;
 const runners = {
@@ -18,6 +18,16 @@ const runners = {
     image: process.env.CPP_RUNNER_IMAGE || 'gcc:14.2.0',
     command: 'g++ -std=c++17 -O2 /code/main.cpp -o /tmp/program && /tmp/program',
   },
+  python: {
+    filename: 'main.py',
+    image: process.env.PYTHON_RUNNER_IMAGE || 'python:3.12-alpine',
+    command: 'python /code/main.py',
+  },
+  typescript: {
+    filename: 'main.ts',
+    image: process.env.TYPESCRIPT_RUNNER_IMAGE || 'node:22-alpine',
+    command: 'node --experimental-strip-types /code/main.ts',
+  },
 };
 
 export class CodeRunnerError extends Error {
@@ -27,16 +37,20 @@ export class CodeRunnerError extends Error {
   }
 }
 
+export function getSupportedRunLanguages() {
+  return new Set(Object.keys(runners));
+}
+
 export async function runCompiledCode(language, code) {
   if (process.env.CODE_RUNNER_ENABLED === 'false') {
     throw new CodeRunnerError('The code runner is disabled on this server.', 503);
   }
-  if (!runners[language]) throw new CodeRunnerError('Only Java and C++ are supported by this runner.');
+  if (!runners[language]) throw new CodeRunnerError('Only Java, TypeScript, Python, and C++ are supported by this runner.');
   if (typeof code !== 'string' || code.length === 0 || code.length > MAX_RUN_CODE_LENGTH) {
     throw new CodeRunnerError(`Code must be between 1 and ${MAX_RUN_CODE_LENGTH} characters.`);
   }
 
-  const runner = runners[language];
+  const runner = resolveRunner(language, code);
   const workingDirectory = await mkdtemp(join(tmpdir(), 'collabcode-run-'));
   try {
     await writeFile(join(workingDirectory, runner.filename), code, { encoding: 'utf8', mode: 0o600 });
@@ -44,6 +58,22 @@ export async function runCompiledCode(language, code) {
   } finally {
     await rm(workingDirectory, { recursive: true, force: true });
   }
+}
+
+function resolveRunner(language, code) {
+  if (language !== 'java') return runners[language];
+
+  const javaClassName = extractJavaClassName(code) || 'Main';
+  return {
+    ...runners.java,
+    filename: `${javaClassName}.java`,
+    command: `cp /code/${javaClassName}.java /tmp/${javaClassName}.java && javac -d /tmp /tmp/${javaClassName}.java && java -cp /tmp ${javaClassName}`,
+  };
+}
+
+function extractJavaClassName(code) {
+  const match = code.match(/\bpublic\s+class\s+([A-Za-z_][A-Za-z0-9_]*)\b/);
+  return match?.[1] || null;
 }
 
 function runInDocker(workingDirectory, runner) {
@@ -57,7 +87,7 @@ function runInDocker(workingDirectory, runner) {
     '--cpus', '1',
     '--cap-drop', 'ALL',
     '--security-opt', 'no-new-privileges',
-    '--tmpfs', '/tmp:rw,nosuid,size=64m',
+    '--tmpfs', '/tmp:rw,nosuid,size=64m,exec',
     '--mount', `type=bind,source=${workingDirectory},target=/code,readonly`,
     runner.image,
     'sh', '-c', runner.command,
@@ -84,7 +114,7 @@ function runInDocker(workingDirectory, runner) {
     dockerProcess.on('close', (exitCode) => {
       clearTimeout(timeout);
       if (timedOut) {
-        reject(new CodeRunnerError('Execution stopped after 5 seconds.', 408));
+        reject(new CodeRunnerError(`Execution stopped after ${RUN_TIMEOUT_MS / 1000} seconds.`, 408));
         return;
       }
       resolve({ stdout, stderr, exitCode });
