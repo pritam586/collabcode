@@ -5,7 +5,7 @@ import { applyDeltaToText, createMinimalDelta } from '../utils/monacoDeltaAdapte
 
 const validColors = new Set(['violet', 'cyan', 'amber', 'rose', 'lime', 'sky']);
 
-export function EditorPane({ room, syncKey, runRequest, remoteCursors, onVersionChange, onLanguageResync, onRecoveryDraft, onNotice }) {
+export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCursors, onVersionChange, onLanguageResync, onRecoveryDraft, onOutputVisibilityChange, onNotice }) {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const authoritativeContentRef = useRef(room.content);
@@ -19,10 +19,13 @@ export function EditorPane({ room, syncKey, runRequest, remoteCursors, onVersion
   const mountCleanupRef = useRef(null);
   const runnerFrameRef = useRef(null);
   const lastRunRequestRef = useRef(0);
+  const resizeCleanupRef = useRef(null);
+  const paneRef = useRef(null);
   const [editor, setEditor] = useState(null);
   const [runnerSource, setRunnerSource] = useState('');
   const [runnerKey, setRunnerKey] = useState(0);
   const [runOutput, setRunOutput] = useState([]);
+  const [outputHeight, setOutputHeight] = useState(250);
 
   const requestResync = useCallback(() => {
     if (room.id) socket.emit('request-resync', { roomId: room.id });
@@ -50,6 +53,7 @@ export function EditorPane({ room, syncKey, runRequest, remoteCursors, onVersion
   }, []);
 
   const runCurrentCode = useCallback(() => {
+    onOutputVisibilityChange(true);
     const code = editorRef.current?.getValue() || '';
     if (room.language !== 'javascript') {
       setRunOutput([{ type: 'error', text: `Run Code currently supports JavaScript. Switch the language from ${room.language} to JavaScript to execute this file.` }]);
@@ -63,7 +67,7 @@ export function EditorPane({ room, syncKey, runRequest, remoteCursors, onVersion
     setRunOutput([{ type: 'muted', text: 'Running JavaScript in an isolated browser sandbox…' }]);
     setRunnerSource(createRunnerDocument(code));
     setRunnerKey((current) => current + 1);
-  }, [room.language]);
+  }, [onOutputVisibilityChange, room.language]);
 
   useEffect(() => {
     if (runRequest <= lastRunRequestRef.current) return;
@@ -150,11 +154,40 @@ export function EditorPane({ room, syncKey, runRequest, remoteCursors, onVersion
     return undefined;
   }, [editor, remoteCursors]);
 
+  useEffect(() => {
+    if (editor) editor.layout();
+  }, [editor, isOutputOpen, outputHeight]);
+
   useEffect(() => () => {
     window.clearTimeout(flushTimerRef.current);
     window.clearTimeout(cursorTimerRef.current);
+    resizeCleanupRef.current?.();
     mountCleanupRef.current?.();
   }, []);
+
+  function startOutputResize(event) {
+    event.preventDefault();
+    const startY = event.clientY;
+    const startHeight = outputHeight;
+
+    function resize(moveEvent) {
+      const paneHeight = paneRef.current?.clientHeight || 0;
+      const maximumHeight = Math.max(140, paneHeight - 160);
+      const nextHeight = Math.min(maximumHeight, Math.max(120, startHeight + startY - moveEvent.clientY));
+      setOutputHeight(nextHeight);
+    }
+
+    function stopResize() {
+      window.removeEventListener('pointermove', resize);
+      window.removeEventListener('pointerup', stopResize);
+      resizeCleanupRef.current = null;
+    }
+
+    resizeCleanupRef.current?.();
+    resizeCleanupRef.current = stopResize;
+    window.addEventListener('pointermove', resize);
+    window.addEventListener('pointerup', stopResize, { once: true });
+  }
 
   function handleMount(instance, monaco) {
     mountCleanupRef.current?.();
@@ -281,7 +314,7 @@ export function EditorPane({ room, syncKey, runRequest, remoteCursors, onVersion
   }
 
   return (
-    <div className="editor-pane">
+    <div className="editor-pane" ref={paneRef}>
       <div className="editor-surface">
         <Editor
           height="100%"
@@ -304,10 +337,11 @@ export function EditorPane({ room, syncKey, runRequest, remoteCursors, onVersion
           }}
         />
       </div>
-      {runOutput.length > 0 && (
-        <section className="run-output" aria-live="polite" aria-label="Code output">
+      {isOutputOpen && (
+        <section className="run-output" style={{ flexBasis: `${outputHeight}px` }} aria-live="polite" aria-label="Code output">
+          <div className="output-resizer" role="separator" aria-label="Resize output panel" aria-orientation="horizontal" onPointerDown={startOutputResize} />
           <div className="run-output-heading"><span>OUTPUT</span><button type="button" onClick={() => setRunOutput([])}>Clear</button></div>
-          <pre>{runOutput.map((line, index) => <code className={`output-${line.type}`} key={`${index}-${line.text}`}>{line.text}{'\n'}</code>)}</pre>
+          <pre>{runOutput.length > 0 ? runOutput.map((line, index) => <code className={`output-${line.type}`} key={`${index}-${line.text}`}>{line.text}{'\n'}</code>) : <code className="output-muted">Run JavaScript to see logs and errors here.</code>}</pre>
         </section>
       )}
       {runnerSource && <iframe key={runnerKey} ref={runnerFrameRef} className="runner-frame" sandbox="allow-scripts" srcDoc={runnerSource} title="JavaScript code runner" />}

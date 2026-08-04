@@ -18,6 +18,7 @@ export default function App() {
   const [recoveryDraft, setRecoveryDraft] = useState('');
   const [syncKey, setSyncKey] = useState(0);
   const [runRequest, setRunRequest] = useState(0);
+  const [isOutputOpen, setIsOutputOpen] = useState(false);
   const requestedRoomRef = useRef(null);
 
   useEffect(() => {
@@ -148,6 +149,9 @@ export default function App() {
           <button className="run-button" type="button" onClick={() => setRunRequest((value) => value + 1)}>
             <span aria-hidden="true">&#9654;</span> Run code
           </button>
+          <button className={`output-toggle ${isOutputOpen ? 'active' : ''}`} type="button" aria-pressed={isOutputOpen} onClick={() => setIsOutputOpen((isOpen) => !isOpen)}>
+            <span aria-hidden="true">&#9646;</span> Output
+          </button>
           <button className="leave-button" type="button" onClick={leaveRoom}>Leave</button>
         </div>
       </header>
@@ -169,10 +173,12 @@ export default function App() {
             room={room}
             syncKey={syncKey}
             runRequest={runRequest}
+            isOutputOpen={isOutputOpen}
             remoteCursors={remoteCursors}
             onVersionChange={(version) => setRoom((current) => current ? { ...current, version } : current)}
             onLanguageResync={(language) => setRoom((current) => current && language ? { ...current, language } : current)}
             onRecoveryDraft={(draft) => setRecoveryDraft((current) => current || draft)}
+            onOutputVisibilityChange={setIsOutputOpen}
             onNotice={setNotice}
           />
           <footer className="editor-status"><span><i className={`status-dot ${connectionState}`} /> {connectionState === 'connected' ? 'Synced' : 'Offline changes protected'}</span><span>UTF-8</span><span>Spaces: 2</span><span>{room.language}</span></footer>
