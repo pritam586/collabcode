@@ -1,4 +1,5 @@
-import { applyDeltaToString, getOrCreateRoom, getRoomSnapshot } from '../state/roomStore.js';
+import { isSupportedLanguage } from '../config/collaboration.js';
+import { applyDeltaToString, getOrCreateRoom, getRoomSnapshot, touchRoom } from '../state/roomStore.js';
 
 export function registerCodeHandlers(io, socket) {
   socket.on('code-change', ({ roomId, delta, version } = {}) => {
@@ -19,6 +20,7 @@ export function registerCodeHandlers(io, socket) {
 
     room.content = updatedContent;
     room.docVersion += 1;
+    touchRoom(room);
 
     // The sender needs an acknowledgement to advance its local base version.
     socket.emit('change-accepted', { version: room.docVersion });
@@ -31,10 +33,11 @@ export function registerCodeHandlers(io, socket) {
   });
 
   socket.on('language-change', ({ roomId, language } = {}) => {
-    if (!isCurrentRoom(socket, roomId) || typeof language !== 'string') return;
+    if (!isCurrentRoom(socket, roomId) || !isSupportedLanguage(language)) return;
 
     const room = getOrCreateRoom(roomId);
-    room.language = language.slice(0, 32);
+    room.language = language;
+    touchRoom(room);
     socket.to(roomId).emit('language-changed', { language: room.language });
   });
 }

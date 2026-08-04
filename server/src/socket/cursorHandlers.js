@@ -25,5 +25,7 @@ function isValidSelection(position) {
     position.startColumn,
     position.endLineNumber,
     position.endColumn,
-  ].every((value) => Number.isInteger(value) && value > 0);
+  ].every((value) => Number.isInteger(value) && value > 0)
+    && (position.startLineNumber < position.endLineNumber
+      || (position.startLineNumber === position.endLineNumber && position.startColumn <= position.endColumn));
 }

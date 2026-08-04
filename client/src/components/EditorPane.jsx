@@ -5,7 +5,7 @@ import { applyDeltaToText, createMinimalDelta } from '../utils/monacoDeltaAdapte
 
 const validColors = new Set(['violet', 'cyan', 'amber', 'rose', 'lime', 'sky']);
 
-export function EditorPane({ room, syncKey, remoteCursors, onVersionChange, onLanguageResync, onNotice }) {
+export function EditorPane({ room, syncKey, runRequest, remoteCursors, onVersionChange, onLanguageResync, onRecoveryDraft, onNotice }) {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const authoritativeContentRef = useRef(room.content);
@@ -17,7 +17,12 @@ export function EditorPane({ room, syncKey, remoteCursors, onVersionChange, onLa
   const latestSelectionRef = useRef(null);
   const decorationIdsRef = useRef([]);
   const mountCleanupRef = useRef(null);
+  const runnerFrameRef = useRef(null);
+  const lastRunRequestRef = useRef(0);
   const [editor, setEditor] = useState(null);
+  const [runnerSource, setRunnerSource] = useState('');
+  const [runnerKey, setRunnerKey] = useState(0);
+  const [runOutput, setRunOutput] = useState([]);
 
   const requestResync = useCallback(() => {
     if (room.id) socket.emit('request-resync', { roomId: room.id });
@@ -25,7 +30,7 @@ export function EditorPane({ room, syncKey, remoteCursors, onVersionChange, onLa
 
   const flushLocalChange = useCallback(() => {
     const model = editorRef.current?.getModel();
-    if (!model || pendingDeltaRef.current) return;
+    if (!model || pendingDeltaRef.current || !socket.connected) return;
 
     const currentContent = model.getValue();
     const delta = createMinimalDelta(authoritativeContentRef.current, currentContent);
@@ -40,11 +45,71 @@ export function EditorPane({ room, syncKey, remoteCursors, onVersionChange, onLa
     flushTimerRef.current = window.setTimeout(flushLocalChange, 140);
   }, [flushLocalChange]);
 
+  const appendRunOutput = useCallback((type, text) => {
+    setRunOutput((current) => [...current, { type, text }].slice(-60));
+  }, []);
+
+  const runCurrentCode = useCallback(() => {
+    const code = editorRef.current?.getValue() || '';
+    if (room.language !== 'javascript') {
+      setRunOutput([{ type: 'error', text: `Run Code currently supports JavaScript. Switch the language from ${room.language} to JavaScript to execute this file.` }]);
+      return;
+    }
+    if (!code.trim()) {
+      setRunOutput([{ type: 'muted', text: 'Nothing to run yet.' }]);
+      return;
+    }
+
+    setRunOutput([{ type: 'muted', text: 'Running JavaScript in an isolated browser sandbox…' }]);
+    setRunnerSource(createRunnerDocument(code));
+    setRunnerKey((current) => current + 1);
+  }, [room.language]);
+
+  useEffect(() => {
+    if (runRequest <= lastRunRequestRef.current) return;
+    lastRunRequestRef.current = runRequest;
+    runCurrentCode();
+  }, [runRequest, runCurrentCode]);
+
+  useEffect(() => {
+    function receiveRunnerMessage(event) {
+      if (event.source !== runnerFrameRef.current?.contentWindow || event.data?.source !== 'collabcode-runner') return;
+      const { type, text } = event.data;
+      if (type === 'done') return;
+      appendRunOutput(type === 'error' ? 'error' : 'log', text);
+    }
+
+    window.addEventListener('message', receiveRunnerMessage);
+    return () => window.removeEventListener('message', receiveRunnerMessage);
+  }, [appendRunOutput]);
+
   useEffect(() => {
     if (!editor) return undefined;
     const model = editor.getModel();
     if (!model) return undefined;
 
+    const localContent = model.getValue();
+    const baseContent = authoritativeContentRef.current;
+    const hasUnsyncedChanges = pendingDeltaRef.current || localContent !== baseContent;
+
+    if (hasUnsyncedChanges && localContent === room.content) {
+      authoritativeContentRef.current = room.content;
+      versionRef.current = room.version;
+      pendingDeltaRef.current = null;
+      onVersionChange(room.version);
+      return undefined;
+    }
+
+    if (hasUnsyncedChanges && room.content === baseContent) {
+      authoritativeContentRef.current = room.content;
+      versionRef.current = room.version;
+      pendingDeltaRef.current = null;
+      onVersionChange(room.version);
+      scheduleFlush();
+      return undefined;
+    }
+
+    if (hasUnsyncedChanges) onRecoveryDraft(localContent);
     isRemoteChangeRef.current = true;
     model.setValue(room.content);
     isRemoteChangeRef.current = false;
@@ -140,6 +205,7 @@ export function EditorPane({ room, syncKey, remoteCursors, onVersionChange, onLa
         currentContent !== authoritativeContentRef.current ||
         version !== versionRef.current + 1
       ) {
+        if (currentContent !== authoritativeContentRef.current) onRecoveryDraft(currentContent);
         requestResync();
         return;
       }
@@ -160,6 +226,30 @@ export function EditorPane({ room, syncKey, remoteCursors, onVersionChange, onLa
 
     function handleResync({ content, version, language }) {
       window.clearTimeout(flushTimerRef.current);
+      const localContent = instance.getValue();
+      const baseContent = authoritativeContentRef.current;
+      const hasUnsyncedChanges = pendingDeltaRef.current || localContent !== baseContent;
+
+      if (hasUnsyncedChanges && localContent === content) {
+        authoritativeContentRef.current = content;
+        versionRef.current = version;
+        pendingDeltaRef.current = null;
+        onVersionChange(version);
+        onLanguageResync(language);
+        return;
+      }
+
+      if (hasUnsyncedChanges && content === baseContent) {
+        authoritativeContentRef.current = content;
+        versionRef.current = version;
+        pendingDeltaRef.current = null;
+        onVersionChange(version);
+        onLanguageResync(language);
+        scheduleFlush();
+        return;
+      }
+
+      if (hasUnsyncedChanges) onRecoveryDraft(localContent);
       pendingDeltaRef.current = null;
       isRemoteChangeRef.current = true;
       instance.getModel().setValue(content);
@@ -192,26 +282,93 @@ export function EditorPane({ room, syncKey, remoteCursors, onVersionChange, onLa
 
   return (
     <div className="editor-pane">
-      <Editor
-        height="100%"
-        defaultLanguage={room.language}
-        defaultValue={room.content}
-        theme="vs-dark"
-        onMount={handleMount}
-        options={{
-          automaticLayout: true,
-          fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
-          fontSize: 14,
-          lineHeight: 24,
-          minimap: { enabled: false },
-          padding: { top: 18, bottom: 18 },
-          scrollBeyondLastLine: false,
-          smoothScrolling: true,
-          cursorSmoothCaretAnimation: 'on',
-          renderLineHighlight: 'all',
-          tabSize: 2,
-        }}
-      />
+      <div className="editor-surface">
+        <Editor
+          height="100%"
+          defaultLanguage={room.language}
+          defaultValue={room.content}
+          theme="vs-dark"
+          onMount={handleMount}
+          options={{
+            automaticLayout: true,
+            fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+            fontSize: 14,
+            lineHeight: 24,
+            minimap: { enabled: false },
+            padding: { top: 18, bottom: 18 },
+            scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            cursorSmoothCaretAnimation: 'on',
+            renderLineHighlight: 'all',
+            tabSize: 2,
+          }}
+        />
+      </div>
+      {runOutput.length > 0 && (
+        <section className="run-output" aria-live="polite" aria-label="Code output">
+          <div className="run-output-heading"><span>OUTPUT</span><button type="button" onClick={() => setRunOutput([])}>Clear</button></div>
+          <pre>{runOutput.map((line, index) => <code className={`output-${line.type}`} key={`${index}-${line.text}`}>{line.text}{'\n'}</code>)}</pre>
+        </section>
+      )}
+      {runnerSource && <iframe key={runnerKey} ref={runnerFrameRef} className="runner-frame" sandbox="allow-scripts" srcDoc={runnerSource} title="JavaScript code runner" />}
     </div>
   );
+}
+
+const RUNNER_WORKER_SOURCE = `
+  const stringify = (value) => {
+    if (typeof value === 'string') return value;
+    if (value === undefined) return 'undefined';
+    if (value === null) return 'null';
+    try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+  };
+  const send = (type, values = []) => postMessage({ type, text: values.map(stringify).join(' ') });
+  for (const method of ['log', 'info', 'warn', 'error']) {
+    console[method] = (...values) => send(method === 'error' ? 'error' : 'log', values);
+  }
+  self.onmessage = async ({ data }) => {
+    try {
+      const result = (0, eval)(data.code);
+      const value = await Promise.resolve(result);
+      if (value !== undefined) send('log', [value]);
+    } catch (error) {
+      send('error', [error?.stack || error?.message || error]);
+    } finally {
+      send('done');
+    }
+  };
+`;
+
+function createRunnerDocument(code) {
+  const safelyEncodedCode = JSON.stringify(code).replace(/</g, '\\u003c');
+  const safelyEncodedWorker = JSON.stringify(RUNNER_WORKER_SOURCE).replace(/</g, '\\u003c');
+  return `<!doctype html><html><body><script>
+    const source = 'collabcode-runner';
+    const workerUrl = URL.createObjectURL(new Blob([${safelyEncodedWorker}], { type: 'text/javascript' }));
+    const worker = new Worker(workerUrl);
+    let completed = false;
+    const closeWorker = () => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeout);
+      worker.terminate();
+      URL.revokeObjectURL(workerUrl);
+    };
+    const relay = (payload) => parent.postMessage({ source, ...payload }, '*');
+    const timeout = setTimeout(() => {
+      relay({ type: 'error', text: 'Execution stopped after 3 seconds.' });
+      relay({ type: 'done' });
+      closeWorker();
+    }, 3000);
+    worker.onmessage = ({ data }) => {
+      relay(data);
+      if (data.type === 'done') closeWorker();
+    };
+    worker.onerror = (event) => {
+      relay({ type: 'error', text: event.message || 'The JavaScript runner failed.' });
+      relay({ type: 'done' });
+      closeWorker();
+    };
+    worker.postMessage({ code: ${safelyEncodedCode} });
+  <\/script></body></html>`;
 }

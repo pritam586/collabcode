@@ -1,13 +1,16 @@
-import { getOrCreateRoom, getRoomSnapshot } from '../state/roomStore.js';
+import { isValidDisplayName, isValidRoomId, MAX_DISPLAY_NAME_LENGTH, MAX_ROOM_ID_LENGTH } from '../config/collaboration.js';
+import { getOrCreateRoom, getRoomSnapshot, markRoomEmpty } from '../state/roomStore.js';
 import { assignColor } from '../utils/colorAssigner.js';
 
 export function registerRoomHandlers(io, socket) {
   socket.on('join-room', (payload = {}) => {
-    const roomId = sanitize(payload.roomId, 64);
-    const name = sanitize(payload.name, 32);
+    const roomId = typeof payload.roomId === 'string' ? payload.roomId.trim() : '';
+    const name = typeof payload.name === 'string' ? payload.name.trim() : '';
 
-    if (!roomId || !name) {
-      socket.emit('room-error', { message: 'A room name and display name are required.' });
+    if (!isValidRoomId(roomId) || !isValidDisplayName(name)) {
+      socket.emit('room-error', {
+        message: `Use a room ID up to ${MAX_ROOM_ID_LENGTH} characters (letters, numbers, dots, dashes, or underscores) and a display name up to ${MAX_DISPLAY_NAME_LENGTH} characters.`,
+      });
       return;
     }
 
@@ -38,10 +41,8 @@ export function leaveCurrentRoom(io, socket) {
     socket.to(roomId).emit('participant-left', { socketId: socket.id });
   }
 
+  if (room.participants.size === 0) markRoomEmpty(room);
+
   socket.leave(roomId);
   socket.data.roomId = undefined;
-}
-
-function sanitize(value, maximumLength) {
-  return typeof value === 'string' ? value.trim().slice(0, maximumLength) : '';
 }

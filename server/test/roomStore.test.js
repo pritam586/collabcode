@@ -29,3 +29,17 @@ test('rejects deltas that point outside the document', () => {
 
   assert.equal(next, null);
 });
+
+test('rejects deltas larger than the configured collaboration limit', () => {
+  const next = applyDeltaToString('', {
+    range: {
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: 1,
+      endColumn: 1,
+    },
+    text: 'x'.repeat(25_001),
+  });
+
+  assert.equal(next, null);
+});
