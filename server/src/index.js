@@ -5,10 +5,13 @@ import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { registerSocketHandlers } from './socket/index.js';
 import { registerRunRoute } from './routes/runRoute.js';
+import { createOriginMatcher } from './config/origins.js';
 
 const app = express();
 const httpServer = createServer(app);
-const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+const isAllowedOrigin = createOriginMatcher({ clientOrigin: process.env.CLIENT_ORIGIN, nodeEnv: process.env.NODE_ENV });
+// Requests without an Origin header (curl, health checks) are not browser cross-origin requests.
+const corsOrigin = (origin, callback) => callback(null, !origin || isAllowedOrigin(origin));
 
 app.disable('x-powered-by');
 app.use((_request, response, next) => {
@@ -18,7 +21,7 @@ app.use((_request, response, next) => {
   next();
 });
 
-app.use(cors({ origin: clientOrigin }));
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json({ limit: '110kb' }));
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' });
@@ -28,8 +31,13 @@ registerRunRoute(app);
 const io = new Server(httpServer, {
   maxHttpBufferSize: 110_000,
   cors: {
-    origin: clientOrigin,
+    origin: corsOrigin,
     methods: ['GET', 'POST'],
+  },
+  // CORS does not apply to WebSocket upgrades, so check the browser origin explicitly.
+  allowRequest: (request, callback) => {
+    const { origin } = request.headers;
+    callback(null, !origin || isAllowedOrigin(origin));
   },
 });
 
