@@ -7,7 +7,8 @@ const days = (count) => count * 24 * 60 * 60 * 1000;
 
 const envSchema = z.object({
   NODE_ENV: optional(z.enum(['development', 'production', 'test']).default('development')),
-  PORT: optional(z.coerce.number().int().min(1).max(65_535).default(4000)),
+  // 0 asks the OS for a free port (used by the integration tests).
+  PORT: optional(z.coerce.number().int().min(0).max(65_535).default(4000)),
   CLIENT_ORIGIN: optional(z.string().default('http://localhost:5173')),
   TRUST_PROXY: optional(z.string().optional()),
   LOG_LEVEL: optional(z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info')),

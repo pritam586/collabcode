@@ -13,3 +13,9 @@ export function createOriginMatcher({ clientOrigin = 'http://localhost:5173', no
     return allowedOrigins.has(origin) || (allowLocalDev && LOCAL_DEV_ORIGIN.test(origin));
   };
 }
+
+// Adapter for the `origin` option of cors() and Socket.io. Requests without an Origin header
+// (curl, health checks, server-to-server) are not browser cross-origin requests.
+export function toCorsOrigin(isAllowedOrigin) {
+  return (origin, callback) => callback(null, !origin || isAllowedOrigin(origin));
+}

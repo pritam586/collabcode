@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { HttpError } from '../utils/httpError.js';
 
 const RUN_TIMEOUT_MS = 120_000;
 const MAX_OUTPUT_LENGTH = 16_000;
@@ -26,10 +27,10 @@ const runnerTemplates = {
   },
 };
 
-export class CodeRunnerError extends Error {
+export class CodeRunnerError extends HttpError {
   constructor(message, status = 400) {
-    super(message);
-    this.status = status;
+    super(status, message);
+    this.name = 'CodeRunnerError';
   }
 }
 
