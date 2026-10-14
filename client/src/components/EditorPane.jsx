@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { bindMonacoToYText } from '../collab/monacoBinding.js';
 import { bindRemoteCursors } from '../collab/remoteCursors.js';
+import { MOD_KEY } from './ui/Kbd.jsx';
 import { runCompiledCode } from '../utils/codeRunner.js';
 
 // Binds Monaco to the room's shared Yjs document (the provider is owned by App) and runs code.
-export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputVisibilityChange, onRunShortcut }) {
+export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputVisibilityChange, onRunShortcut, theme = 'dark', fontSize = 14 }) {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const runnerFrameRef = useRef(null);
@@ -87,8 +88,8 @@ export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputV
   useEffect(() => {
     if (!editor || !monacoRef.current) return undefined;
     const monaco = monacoRef.current;
-    const binding = bindMonacoToYText({ ytext: provider.text, editor, monaco });
     const cursors = bindRemoteCursors({ provider, editor, monaco });
+    const binding = bindMonacoToYText({ ytext: provider.text, editor, monaco, onLocalChange: cursors.markTyping });
     return () => {
       cursors.destroy();
       binding.destroy();
@@ -145,17 +146,26 @@ export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputV
   return (
     <div className="editor-pane" ref={paneRef}>
       <div className="editor-surface" aria-busy={!isSynced}>
-        {!isSynced && <div className="editor-loading" role="status"><span className="spinner" aria-hidden="true" /> Loading the shared code…</div>}
+        {!isSynced && (
+          <div className="editor-loading" role="status">
+            <div className="editor-loading-lines" aria-hidden="true">
+              {[64, 42, 78, 30, 56].map((width, index) => <span key={index} className="skeleton skeleton-line" style={{ width: `${width}%` }} />)}
+            </div>
+            <p><span className="spinner" aria-hidden="true" /> Loading the shared code…</p>
+          </div>
+        )}
         <Editor
           height="100%"
           defaultLanguage={room.language}
-          theme="vs-dark"
+          theme={theme === 'light' ? 'vs' : 'vs-dark'}
+          loading={<span className="sr-only">Loading the editor…</span>}
           onMount={handleMount}
           options={{
             automaticLayout: true,
+            ariaLabel: 'Shared code editor. Press Alt+F1 for editor accessibility help.',
             fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
-            fontSize: 14,
-            lineHeight: 24,
+            fontSize,
+            lineHeight: Math.round(fontSize * 1.7),
             minimap: { enabled: false },
             padding: { top: 18, bottom: 18 },
             scrollBeyondLastLine: false,
@@ -171,8 +181,11 @@ export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputV
       {isOutputOpen && (
         <section className="run-output" style={{ flexBasis: `${outputHeight}px` }} aria-live="polite" aria-label="Code output">
           <div className="output-resizer" role="separator" aria-label="Resize output panel" aria-orientation="horizontal" onPointerDown={startOutputResize} />
-          <div className="run-output-heading"><span>OUTPUT</span><button type="button" onClick={() => setRunOutput([])}>Clear</button></div>
-          <pre>{runOutput.length > 0 ? runOutput.map((line, index) => <code className={`output-${line.type}`} key={`${index}-${line.text}`}>{line.text}{'\n'}</code>) : <code className="output-muted">Run JavaScript to see logs and errors here.</code>}</pre>
+          <div className="run-output-heading">
+            <h2>Output</h2>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRunOutput([])} disabled={runOutput.length === 0}>Clear</button>
+          </div>
+          <pre>{runOutput.length > 0 ? runOutput.map((line, index) => <code className={`output-${line.type}`} key={`${index}-${line.text}`}>{line.text}{'\n'}</code>) : <code className="output-muted">Press Run or {MOD_KEY}+Enter to run the code. Output and errors appear here.</code>}</pre>
         </section>
       )}
       {runnerSource && <iframe key={runnerKey} ref={runnerFrameRef} className="runner-frame" sandbox="allow-scripts" srcDoc={runnerSource} title="JavaScript code runner" />}

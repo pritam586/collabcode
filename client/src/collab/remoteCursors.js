@@ -2,8 +2,10 @@ import * as Y from 'yjs';
 
 const COLORS = new Set(['violet', 'cyan', 'amber', 'rose', 'lime', 'sky']);
 const CURSOR_SEND_DELAY_MS = 45;
+const TYPING_IDLE_MS = 1500;
 
-// Publishes this editor's selection through Yjs awareness and draws everyone else's.
+// Publishes this editor's selection and typing state through Yjs awareness and draws
+// everyone else's cursors.
 // Positions are Yjs relative positions, so a cursor stays on the same character while other
 // people insert or delete text before it. Names and colors come from the server (state.user).
 export function bindRemoteCursors({ provider, editor, monaco }) {
@@ -11,6 +13,7 @@ export function bindRemoteCursors({ provider, editor, monaco }) {
   const model = editor.getModel();
   let decorationIds = [];
   let sendTimer = null;
+  let typingTimer = null;
 
   const toRelative = (position) => Y.relativePositionToJSON(Y.createRelativePositionFromTypeIndex(text, model.getOffsetAt(position)));
   const toPosition = (json) => {
@@ -60,9 +63,18 @@ export function bindRemoteCursors({ provider, editor, monaco }) {
   doc.on('afterTransaction', render);
   render();
 
+  // Called for each local edit. Only state changes are sent, not every keystroke.
+  function markTyping() {
+    if (!awareness.getLocalState()?.typing) awareness.setLocalStateField('typing', true);
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => awareness.setLocalStateField('typing', false), TYPING_IDLE_MS);
+  }
+
   return {
+    markTyping,
     destroy() {
       clearTimeout(sendTimer);
+      clearTimeout(typingTimer);
       selectionSubscription.dispose();
       awareness.off('change', render);
       doc.off('afterTransaction', render);

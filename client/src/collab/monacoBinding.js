@@ -6,7 +6,7 @@ import * as Y from 'yjs';
 //
 // Undo and redo go through a Y.UndoManager that only tracks this editor's own edits, so
 // Ctrl+Z never reverts something a collaborator typed.
-export function bindMonacoToYText({ ytext, editor, monaco }) {
+export function bindMonacoToYText({ ytext, editor, monaco, onLocalChange }) {
   const model = editor.getModel();
   const origin = { binding: 'monaco' };
   let applyingRemote = false;
@@ -69,6 +69,7 @@ export function bindMonacoToYText({ ytext, editor, monaco }) {
         if (text) ytext.insert(change.rangeOffset, text);
       }
     }, origin);
+    onLocalChange?.();
   });
 
   const undoManager = new Y.UndoManager(ytext, { trackedOrigins: new Set([origin]) });
