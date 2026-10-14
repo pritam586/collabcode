@@ -61,7 +61,8 @@ while offline, so there are no version numbers, acknowledgements or resyncs to h
 
 ```ts
 type Participant = { socketId: string; name: string; color: 'violet' | 'cyan' | 'amber' | 'rose' | 'lime' | 'sky' };
-type Snapshot = { version: number; language: string; participants: Participant[] }; // version counts applied updates
+type ChatMessage = { id: number; author: { name: string; color: string; socketId?: string }; body: string; createdAt: number }; // createdAt: epoch ms
+type Snapshot = { version: number; language: string; participants: Participant[]; messages: ChatMessage[] }; // version counts applied updates; messages are the latest 50
 ```
 
 ### Joining and syncing
@@ -86,6 +87,7 @@ After a reconnect the client repeats all four steps with the document it already
 | `yjs-sync` | `{ roomId, data }`: sync step 1, step 2 or update | Step 1: `yjs-sync` (step 2) and `yjs-awareness`. Step 2 or update: relayed to the others. If the change would make the text longer than 100,000 characters, contains a carriage return, or is malformed or too large: `document-error` with `reset: true`. |
 | `yjs-awareness` | `{ roomId, data }`: an awareness update for the sender's own client id | Relayed to the others. The server keeps only `cursor` (Yjs relative positions `{ anchor, head }`) and `typing`, and sets `user` to the server's record `{ socketId, name, color }`. Updates for client ids first used by another socket are ignored. |
 | `language-change` | `{ roomId, language }`: one of `javascript`, `typescript`, `java`, `cpp`, `python`, `json`, `css`, `html`, `markdown` | `language-changed` to the others |
+| `chat-send` | `{ roomId, body, clientId? }`: `body` is 1–1,000 characters after trimming, with no control characters except newline and tab. `clientId` (up to 64 characters) is echoed back so the sender can match its pending copy. Limit: 10 messages per 10 seconds per connection. | `chat-message` to everyone in the room, including the sender, or `chat-error` to the sender |
 
 ### Server → client
 
@@ -99,6 +101,8 @@ After a reconnect the client repeats all four steps with the document it already
 | `yjs-awareness` | `{ roomId, data }` | Other people's cursors and typing state changed |
 | `document-error` | `{ message, reset: true }` | Your change was refused. It is already applied in your editor and Yjs changes cannot be taken back, so discard your local document and sync a fresh one. |
 | `language-changed` | `{ language }` | Someone changed the room's language |
+| `chat-message` | `ChatMessage & { clientId? }` | A message was posted. The author and time are set by the server. |
+| `chat-error` | `{ message, clientId? }` | Your message was refused (invalid, too fast, or not stored) |
 | `server-error` | `{ message }` | A handler failed unexpectedly, or you are sending events too quickly. If a document update was dropped, the server restarts the sync handshake once the rate-limit window resets. |
 
 Each connection may send 200 events and 4 MB of Yjs data per 5 seconds.
@@ -119,6 +123,11 @@ offsets as `Y.Text`. The server refuses updates that would add `\r`, and convert
   and during graceful shutdown. A crash can lose up to about 2 seconds of edits; the sync
   handshake gets them back from any client that still has them.
 - Rooms that were opened but never edited are not stored.
+- Chat messages are stored in `chat_messages` and deleted with their room. Each room keeps
+  its newest 500 messages.
+- The task list lives in the same Yjs document as the code (a `Y.Array` named `tasks` of
+  `Y.Map`s with `id`, `text`, `done`, `createdBy`), so it syncs, persists and merges
+  offline edits the same way.
 - An empty room is removed from memory after `EMPTY_ROOM_TTL_MINUTES` (default 30) and
   reloaded from the database on the next join.
 - A stored room nobody opens for `ROOM_RETENTION_DAYS` (default 30) is deleted.

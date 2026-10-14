@@ -2,7 +2,18 @@
 
 A focused real-time collaborative code editor built with React, Monaco Editor, Express, and Socket.io.
 
-The **Run code** button (or **Ctrl+Enter** / **Cmd+Enter**) executes JavaScript in a sandboxed browser frame and shows `console.log` output or runtime errors below the editor. Java, C++, Python, and TypeScript execute in a resource-limited Docker container with network access disabled. JSON, CSS, HTML, and Markdown are available for editing and highlighting only.
+**Create a room** in one click on the home page and share the link (for example `/r/swift-otter-4821`). Anyone who opens it picks a display name and joins; there are no accounts. Inside a room you get:
+
+- A shared Monaco editor with live cursors, name tags and "is typing" indicators.
+- A toolbar with language, **Run** (Ctrl+Enter / Cmd+Enter), output panel, font size, light/dark/system theme, keyboard shortcuts (press `?`), and the sidebar toggle.
+- A collapsible sidebar with **People**, **Chat** (kept with the room) and a shared **Tasks** list.
+- A short first-visit tour, toasts for anything that needs your attention, and friendly error pages.
+
+The **Run** button executes JavaScript in a sandboxed browser frame and shows `console.log` output or runtime errors below the editor. Java, C++, Python, and TypeScript execute in a resource-limited Docker container with network access disabled. JSON, CSS, HTML, and Markdown are available for editing and highlighting only.
+
+The interface is built from design tokens (`client/src/styles/tokens.css`) and a small set of accessible components (`client/src/components/ui/`). `npm run check:contrast` in `client/` verifies every text and UI color pair against WCAG AA in both themes.
+
+Room links are paths like `/r/<code>`, so a production web server must serve `index.html` for them (Vite's dev and preview servers already do).
 
 ## Requirements
 
