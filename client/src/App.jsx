@@ -165,7 +165,7 @@ export default function App() {
   return (
     <main className="workspace-shell">
       <header className="workspace-header">
-        <button className="wordmark" type="button" onClick={leaveRoom} title="Leave workspace">&lt;/&gt; <span>collab<span>code</span></span></button>
+        <button className="wordmark" type="button" onClick={leaveRoom} title="Leave workspace" aria-label="CollabCode, leave workspace">&lt;/&gt; <span>collab<span>code</span></span></button>
         <div className="room-crumb"><span className={`connection-indicator ${connectionState}`}><i /> {connectionState === 'connected' ? 'Live' : 'Reconnecting'}</span><span className="slash">/</span><span>{room.id}</span></div>
         <div className="header-actions">
           <span className="version-label">v{room.version}</span>

@@ -40,15 +40,16 @@
 
 .workspace-shell { background: var(--bg); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .workspace-header { align-items: center; background: #121621; border-bottom: 1px solid var(--border); display: flex; flex: 0 0 58px; gap: 1.75rem; padding: 0 1.35rem; }
-.wordmark { background: transparent; border: 0; color: #e9e5fa; font: 800 1.04rem/1 ui-monospace, monospace; letter-spacing: -.08em; padding: 0; }
+.wordmark { background: transparent; border: 0; color: #e9e5fa; flex-shrink: 0; font: 800 1.04rem/1 ui-monospace, monospace; letter-spacing: -.08em; padding: 0; white-space: nowrap; }
 .wordmark > span { font-family: Inter, sans-serif; letter-spacing: -.05em; margin-left: .32rem; }
 .wordmark > span span { color: #a78bfa; }
-.room-crumb { align-items: center; color: #9fa7b8; display: flex; font: .76rem/1 ui-monospace, monospace; gap: .65rem; min-width: 0; overflow: hidden; white-space: nowrap; }
+.room-crumb { align-items: center; color: #9fa7b8; display: flex; flex: 1 1 auto; font: .76rem/1 ui-monospace, monospace; gap: .65rem; min-width: 0; overflow: hidden; white-space: nowrap; }
+.room-crumb > span:last-child { overflow: hidden; text-overflow: ellipsis; }
 .connection-indicator { align-items: center; color: #b8f0c9; display: inline-flex; gap: .38rem; }
 .connection-indicator i { background: #4ade80; border-radius: 50%; box-shadow: 0 0 10px #4ade80; height: 6px; width: 6px; }
 .connection-indicator.disconnected { color: #fda4af; }.connection-indicator.disconnected i { background: #fb7185; box-shadow: 0 0 10px #fb7185; }
 .slash { color: #525a6e; }
-.header-actions { align-items: center; display: flex; gap: .75rem; margin-left: auto; }
+.header-actions { align-items: center; display: flex; flex-shrink: 0; gap: .75rem; margin-left: auto; white-space: nowrap; }
 .version-label { color: #70788c; font: .73rem/1 ui-monospace, monospace; }
 .language-picker select, .leave-button, .output-toggle { background: #1b2130; border: 1px solid #30394e; border-radius: 7px; color: #cdd3e2; font-size: .77rem; padding: .43rem .6rem; }
 .language-picker select:focus { outline: 1px solid #a78bfa; }
@@ -100,7 +101,16 @@
 .remote-tag-violet { background: #b49bff; }.remote-tag-cyan { background: #6ee7f5; }.remote-tag-amber { background: #fcd34d; }.remote-tag-rose { background: #fda4af; }.remote-tag-lime { background: #bef264; }.remote-tag-sky { background: #7dd3fc; }
 
 @media (max-width: 700px) {
-  .workspace-header { gap: .8rem; padding: 0 .8rem; }
+  .workspace-header { gap: .5rem; padding: 0 .75rem; }
+  .wordmark { min-height: 44px; min-width: 44px; }
+  .wordmark > span { display: none; }
+  .header-actions { gap: .4rem; min-width: 0; }
+  /* 16px keeps iOS Safari from zooming in when the select is focused. */
+  .language-picker select { font-size: 16px; max-width: 8rem; }
+  .language-picker select, .run-button, .output-toggle, .leave-button { min-height: 44px; min-width: 44px; }
+  .run-output-heading { padding-block: 0; }
+  .run-output-heading button { min-height: 44px; padding: 0 .5rem; }
+  .notice button { min-height: 44px; min-width: 44px; }
   .room-crumb { display: none; }
   .workspace-main { grid-template-columns: minmax(0, 1fr); }
   .participants-panel { border-left: 0; border-top: 1px solid var(--border); max-height: 135px; }
@@ -111,4 +121,10 @@
   .run-button span { font-size: .7rem; margin: 0; }
   .output-toggle { font-size: 0; padding: .45rem .57rem; }.output-toggle span { font-size: .8rem; margin: 0; }
   .recovery-draft { grid-template-columns: 1fr; padding: .7rem .8rem; }
+}
+
+@media (max-width: 380px) {
+  /* Leave is still available, so drop the logo button to fit 320px screens. */
+  .wordmark { display: none; }
+  .language-picker select { max-width: 7rem; }
 }
