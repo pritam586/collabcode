@@ -54,9 +54,9 @@ export default function App() {
 
     function handleRoomSync(snapshot) {
       const previous = roomRef.current;
-      // Rejoining a room we had edited and finding it brand new means the server lost it;
+      // Rejoining and finding an older version than ours means the server lost recent changes;
       // keep our language so EditorPane can restore the code under the right mode.
-      const serverLostRoom = previous?.id === snapshot.roomId && previous.version > 0 && snapshot.version === 0 && snapshot.content === '';
+      const serverLostRoom = previous?.id === snapshot.roomId && previous.version > snapshot.version;
       const language = serverLostRoom ? previous.language : snapshot.language;
       if (serverLostRoom && language !== snapshot.language) socket.emit('language-change', { roomId: snapshot.roomId, language });
 
@@ -96,7 +96,13 @@ export default function App() {
     }
 
     function handleRoomError({ message }) {
-      setJoinError(message);
+      // In the workspace this means an automatic rejoin failed (for example, the room filled up).
+      if (roomRef.current) setNotice(`${message} You are no longer receiving live updates.`);
+      else setJoinError(message);
+    }
+
+    function handleServerError({ message }) {
+      setNotice(message);
     }
 
     socket.on('connect', handleConnect);
@@ -107,6 +113,7 @@ export default function App() {
     socket.on('remote-cursor', handleRemoteCursor);
     socket.on('language-changed', handleLanguageChanged);
     socket.on('room-error', handleRoomError);
+    socket.on('server-error', handleServerError);
     socket.connect();
 
     return () => {
@@ -118,6 +125,7 @@ export default function App() {
       socket.off('remote-cursor', handleRemoteCursor);
       socket.off('language-changed', handleLanguageChanged);
       socket.off('room-error', handleRoomError);
+      socket.off('server-error', handleServerError);
       socket.disconnect();
     };
   }, []);
