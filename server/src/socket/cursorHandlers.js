@@ -1,14 +1,15 @@
-import { getOrCreateRoom } from '../state/roomStore.js';
+import { cursorUpdateSchema } from '../validation/schemas.js';
+import { createEventHandler } from './createEventHandler.js';
 
-export function registerCursorHandlers(io, socket) {
-  socket.on('cursor-update', ({ roomId, position } = {}) => {
-    if (socket.data.roomId !== roomId || !isValidSelection(position)) return;
+export function registerCursorHandlers(io, socket, { roomService, logger }) {
+  const on = createEventHandler(socket, logger);
 
-    const room = getOrCreateRoom(roomId);
-    const participant = room.participants.get(socket.id);
+  on('cursor-update', cursorUpdateSchema, ({ roomId, position }) => {
+    if (socket.data.roomId !== roomId) return;
+
+    const participant = roomService.updateCursor(roomId, socket.id, position);
     if (!participant) return;
 
-    participant.cursor = position;
     socket.to(roomId).emit('remote-cursor', {
       socketId: socket.id,
       position,
@@ -16,16 +17,4 @@ export function registerCursorHandlers(io, socket) {
       color: participant.color,
     });
   });
-}
-
-function isValidSelection(position) {
-  if (!position || typeof position !== 'object') return false;
-  return [
-    position.startLineNumber,
-    position.startColumn,
-    position.endLineNumber,
-    position.endColumn,
-  ].every((value) => Number.isInteger(value) && value > 0)
-    && (position.startLineNumber < position.endLineNumber
-      || (position.startLineNumber === position.endLineNumber && position.startColumn <= position.endColumn));
 }

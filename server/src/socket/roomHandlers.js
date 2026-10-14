@@ -1,48 +1,46 @@
-import { isValidDisplayName, isValidRoomId, MAX_DISPLAY_NAME_LENGTH, MAX_ROOM_ID_LENGTH } from '../config/collaboration.js';
-import { getOrCreateRoom, getRoomSnapshot, markRoomEmpty } from '../state/roomStore.js';
-import { assignColor } from '../utils/colorAssigner.js';
+import { z } from 'zod';
+import { MAX_DISPLAY_NAME_LENGTH, MAX_ROOM_ID_LENGTH } from '../config/collaboration.js';
+import { joinRoomSchema } from '../validation/schemas.js';
+import { createEventHandler } from './createEventHandler.js';
 
-export function registerRoomHandlers(io, socket) {
-  socket.on('join-room', (payload = {}) => {
-    const roomId = typeof payload.roomId === 'string' ? payload.roomId.trim() : '';
-    const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+const INVALID_JOIN_MESSAGE = `Use a room ID up to ${MAX_ROOM_ID_LENGTH} characters (letters, numbers, dots, dashes, or underscores) and a display name up to ${MAX_DISPLAY_NAME_LENGTH} characters.`;
 
-    if (!isValidRoomId(roomId) || !isValidDisplayName(name)) {
-      socket.emit('room-error', {
-        message: `Use a room ID up to ${MAX_ROOM_ID_LENGTH} characters (letters, numbers, dots, dashes, or underscores) and a display name up to ${MAX_DISPLAY_NAME_LENGTH} characters.`,
-      });
+export function registerRoomHandlers(io, socket, { roomService, logger }) {
+  const on = createEventHandler(socket, logger);
+
+  on('join-room', joinRoomSchema, ({ roomId, name }) => {
+    leaveCurrentRoom(socket, roomService);
+
+    const result = roomService.join(roomId, socket.id, name);
+    if (!result.ok) {
+      socket.emit('room-error', { message: `This room is full. Up to ${result.maxParticipants} people can be in a room at once.` });
       return;
     }
 
-    leaveCurrentRoom(io, socket);
-
-    const room = getOrCreateRoom(roomId);
-    const color = assignColor(room);
-    const participant = { name, color, cursor: null };
-
-    room.participants.set(socket.id, participant);
     socket.join(roomId);
     socket.data.roomId = roomId;
+    socket.emit('room-sync', { roomId, ...roomService.snapshot(result.room) });
+    socket.to(roomId).emit('participant-joined', { socketId: socket.id, ...result.participant });
+  }, { onInvalid: () => socket.emit('room-error', { message: INVALID_JOIN_MESSAGE }) });
 
-    socket.emit('room-sync', { roomId, ...getRoomSnapshot(room) });
-    socket.to(roomId).emit('participant-joined', { socketId: socket.id, ...participant });
+  on('leave-room', z.any(), () => leaveCurrentRoom(socket, roomService));
+
+  socket.on('disconnect', () => {
+    try {
+      leaveCurrentRoom(socket, roomService);
+    } catch (error) {
+      logger.error({ err: error, socketId: socket.id }, 'Failed to leave room on disconnect');
+    }
   });
-
-  socket.on('leave-room', () => leaveCurrentRoom(io, socket));
-  socket.on('disconnect', () => leaveCurrentRoom(io, socket));
 }
 
-export function leaveCurrentRoom(io, socket) {
-  const roomId = socket.data.roomId;
+function leaveCurrentRoom(socket, roomService) {
+  const { roomId } = socket.data;
   if (!roomId) return;
 
-  const room = getOrCreateRoom(roomId);
-  if (room.participants.delete(socket.id)) {
+  if (roomService.leave(roomId, socket.id)) {
     socket.to(roomId).emit('participant-left', { socketId: socket.id });
   }
-
-  if (room.participants.size === 0) markRoomEmpty(room);
-
   socket.leave(roomId);
   socket.data.roomId = undefined;
 }

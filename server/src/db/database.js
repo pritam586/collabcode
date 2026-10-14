@@ -35,7 +35,7 @@ export function runMigrations(db, pending, logger) {
       db.exec(migration.up);
       record.run(migration.version, migration.name, Date.now());
     });
-    logger?.info({ version: migration.version, name: migration.name }, 'Applied database migration');
+    logger?.info({ version: migration.version, migration: migration.name }, 'Applied database migration');
   }
 }
 

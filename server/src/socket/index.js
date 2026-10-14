@@ -3,7 +3,7 @@ import { registerCodeHandlers } from './codeHandlers.js';
 import { registerCursorHandlers } from './cursorHandlers.js';
 import { registerRoomHandlers } from './roomHandlers.js';
 
-export function createSocketServer(httpServer, { corsOrigin, isAllowedOrigin }) {
+export function createSocketServer(httpServer, { corsOrigin, isAllowedOrigin, roomService, logger }) {
   const io = new Server(httpServer, {
     maxHttpBufferSize: 110_000,
     cors: {
@@ -17,10 +17,11 @@ export function createSocketServer(httpServer, { corsOrigin, isAllowedOrigin }) 
     },
   });
 
+  const context = { roomService, logger };
   io.on('connection', (socket) => {
-    registerRoomHandlers(io, socket);
-    registerCodeHandlers(io, socket);
-    registerCursorHandlers(io, socket);
+    registerRoomHandlers(io, socket, context);
+    registerCodeHandlers(io, socket, context);
+    registerCursorHandlers(io, socket, context);
   });
 
   return io;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { applyDeltaToString } from '../src/state/roomStore.js';
+import { applyDeltaToString } from '../src/utils/textDelta.js';
 
 test('applies a replacement delta across multiple lines', () => {
   const next = applyDeltaToString('one\ntwo\nthree', {
