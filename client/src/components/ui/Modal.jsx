@@ -1,0 +1,46 @@
+import { useEffect, useId, useRef } from 'react';
+import { X } from 'lucide-react';
+import { IconButton } from './Button.jsx';
+
+// A modal built on the native <dialog> element, which traps focus, closes on Escape and makes
+// the rest of the page inert. Focus returns to whatever was focused before it opened.
+export function Modal({ open, title, onClose, children, dismissible = true, initialFocusRef }) {
+  const dialogRef = useRef(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return undefined;
+    if (open && !dialog.open) {
+      const previouslyFocused = document.activeElement;
+      dialog.showModal();
+      initialFocusRef?.current?.focus();
+      return () => {
+        if (dialog.open) dialog.close();
+        if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+      };
+    }
+    return undefined;
+  }, [open, initialFocusRef]);
+
+  function handleCancel(event) {
+    // Escape key. Non-dismissible dialogs (like the name prompt) must be answered.
+    event.preventDefault();
+    if (dismissible) onClose?.();
+  }
+
+  function handleBackdropClick(event) {
+    if (dismissible && event.target === dialogRef.current) onClose?.();
+  }
+
+  if (!open) return null;
+  return (
+    <dialog ref={dialogRef} className="modal" aria-labelledby={titleId} onCancel={handleCancel} onClick={handleBackdropClick}>
+      <div className="modal-header">
+        <h2 className="modal-title" id={titleId}>{title}</h2>
+        {dismissible && <IconButton label="Close" size="sm" onClick={onClose}><X size={18} aria-hidden="true" /></IconButton>}
+      </div>
+      <div className="modal-body">{children}</div>
+    </dialog>
+  );
+}

@@ -1,23 +1,127 @@
+/*
+ * Design tokens. Components use only these variables, never raw colors or sizes.
+ * Dark is the default; [data-theme="light"] on <html> switches every color token.
+ * Color pairs are checked for WCAG AA contrast by `npm run check:contrast`.
+ */
 :root {
+  /* Typography */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-display: clamp(2.25rem, 1.4rem + 4vw, 4rem);
+  --leading-tight: 1.15;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Spacing (4px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Shape */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* Sizing */
+  --control-height-sm: 32px;
+  --control-height-md: 38px;
+  --control-height-lg: 46px;
+  --touch-target: 44px;
+  --header-height: 56px;
+  --sidebar-width: 320px;
+
+  /* Layers and motion */
+  --z-sidebar: 20;
+  --z-tour: 40;
+  --z-toast: 60;
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Dark theme colors (default) */
   color-scheme: dark;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0d1018;
-  color: #edf0f9;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  --bg: #0d1018;
-  --panel: #151925;
-  --panel-strong: #1a1f2e;
-  --border: #2a3040;
-  --muted: #8d94a8;
-  --text: #eef1f8;
-  --accent: #9f7aea;
-  --accent-strong: #b794f4;
-  --green: #4ade80;
+  --color-bg: #0d1018;
+  --color-surface: #141925;
+  --color-surface-raised: #1b2130;
+  --color-surface-sunken: #0a0d14;
+  --color-surface-hover: #222a3b;
+  --color-border: #2a3142;
+  --color-border-strong: #636e88;
+  --color-text: #eef1f8;
+  --color-text-muted: #a6aec0;
+  --color-accent: #a78bfa;
+  --color-accent-hover: #b9a1ff;
+  --color-on-accent: #17132b;
+  --color-accent-text: #c4b5fd;
+  --color-accent-soft: rgba(167, 139, 250, 0.16);
+  --color-focus: #c4b5fd;
+  --color-success: #4ade80;
+  --color-success-soft: rgba(74, 222, 128, 0.14);
+  --color-danger: #fda4af;
+  --color-danger-strong: #e11d48;
+  --color-danger-soft: rgba(251, 113, 133, 0.16);
+  --color-warning: #fcd34d;
+  --color-warning-soft: rgba(251, 191, 36, 0.14);
+  --color-overlay: rgba(5, 7, 12, 0.72);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.5);
+
+  /* Participant colors: avatars, cursors and selections. Text on them uses --color-on-presence. */
+  --presence-violet: #b49bff;
+  --presence-cyan: #6ee7f5;
+  --presence-amber: #fcd34d;
+  --presence-rose: #fda4af;
+  --presence-lime: #bef264;
+  --presence-sky: #7dd3fc;
+  --color-on-presence: #141621;
 }
 
-* { box-sizing: border-box; }
-html, body, #root { min-height: 100%; margin: 0; }
-body { min-height: 100vh; }
-button, input, select { font: inherit; }
-button { cursor: pointer; }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f5f6fa;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #eceef4;
+  --color-surface-hover: #eef0f6;
+  --color-border: #d8dce6;
+  --color-border-strong: #7d869a;
+  --color-text: #161a25;
+  --color-text-muted: #4f5769;
+  --color-accent: #6d4ed8;
+  --color-accent-hover: #5b3cc4;
+  --color-on-accent: #ffffff;
+  --color-accent-text: #5b3cc4;
+  --color-accent-soft: rgba(109, 78, 216, 0.12);
+  --color-focus: #6d4ed8;
+  --color-success: #15803d;
+  --color-success-soft: rgba(21, 128, 61, 0.12);
+  --color-danger: #be123c;
+  --color-danger-strong: #be123c;
+  --color-danger-soft: rgba(190, 18, 60, 0.1);
+  --color-warning: #92400e;
+  --color-warning-soft: rgba(217, 119, 6, 0.14);
+  --color-overlay: rgba(22, 26, 37, 0.45);
+  --shadow-sm: 0 1px 2px rgba(22, 26, 37, 0.08);
+  --shadow-md: 0 8px 24px rgba(22, 26, 37, 0.12);
+  --shadow-lg: 0 20px 48px rgba(22, 26, 37, 0.18);
+}
