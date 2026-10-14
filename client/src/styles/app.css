@@ -50,7 +50,6 @@
 .connection-indicator.disconnected { color: #fda4af; }.connection-indicator.disconnected i { background: #fb7185; box-shadow: 0 0 10px #fb7185; }
 .slash { color: #525a6e; }
 .header-actions { align-items: center; display: flex; flex-shrink: 0; gap: .75rem; margin-left: auto; white-space: nowrap; }
-.version-label { color: #70788c; font: .73rem/1 ui-monospace, monospace; }
 .language-picker select, .leave-button, .output-toggle { background: #1b2130; border: 1px solid #30394e; border-radius: 7px; color: #cdd3e2; font-size: .77rem; padding: .43rem .6rem; }
 .language-picker select:focus { outline: 1px solid #a78bfa; }
 .leave-button:hover { border-color: #626e8a; color: white; }
@@ -61,16 +60,16 @@
 
 .notice { align-items: center; background: #382d1b; border-bottom: 1px solid #725824; color: #f8d98e; display: flex; font-size: .8rem; justify-content: center; padding: .52rem 1rem; }
 .notice button { background: transparent; border: 0; color: inherit; font-size: 1.15rem; line-height: 1; margin-left: .8rem; }
-.recovery-draft { align-items: start; background: #2a2137; border-bottom: 1px solid #6d5297; color: #e8ddfb; display: grid; gap: .65rem; grid-template-columns: minmax(180px, 1fr) minmax(220px, 2fr) auto; padding: .7rem 1.35rem; }
-.recovery-draft strong, .recovery-draft span { display: block; }.recovery-draft strong { font-size: .78rem; }.recovery-draft span { color: #c6b7df; font-size: .72rem; line-height: 1.4; margin-top: .2rem; }
-.recovery-draft textarea { background: #171321; border: 1px solid #54416f; border-radius: 5px; color: #e6dafa; font: .68rem/1.35 "JetBrains Mono", Consolas, monospace; min-height: 48px; padding: .35rem; resize: vertical; width: 100%; }
-.recovery-actions { display: flex; gap: .45rem; }.recovery-actions button { background: #38294d; border: 1px solid #6d5297; border-radius: 5px; color: #e6dafa; font-size: .7rem; padding: .35rem .55rem; white-space: nowrap; }.recovery-actions button:hover { background: #4b3766; }
 .workspace-main { display: grid; flex: 1; grid-template-columns: minmax(0, 1fr) 235px; min-height: 0; }
 .editor-column { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
 .file-tab { align-items: center; background: #151a26; border-bottom: 1px solid #2a3040; color: #adb5c5; display: flex; flex: 0 0 38px; font: .75rem/1 ui-monospace, monospace; gap: .5rem; padding: 0 1.15rem; }
 .file-dot { background: #f7df1e; border-radius: 3px; height: 9px; width: 9px; }
 .editor-pane { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
-.editor-surface { flex: 1 1 0; min-height: 120px; overflow: hidden; }
+.editor-surface { flex: 1 1 0; min-height: 120px; overflow: hidden; position: relative; }
+.editor-loading { align-items: center; background: rgba(13, 16, 24, .82); color: #c7ccdb; display: flex; font-size: .85rem; gap: .6rem; inset: 0; justify-content: center; position: absolute; z-index: 5; }
+.spinner { animation: spin .8s linear infinite; border: 2px solid #3a4258; border-top-color: #a78bfa; border-radius: 50%; height: 16px; width: 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 .run-output { background: #10151f; border-top: 1px solid #323a4d; flex-shrink: 0; min-height: 120px; overflow: auto; position: relative; }
 .output-resizer { cursor: ns-resize; height: 7px; left: 0; position: absolute; right: 0; top: -4px; touch-action: none; z-index: 3; }.output-resizer:hover::after { background: #a78bfa; content: ''; height: 2px; left: 0; position: absolute; right: 0; top: 2px; }
 .run-output-heading { align-items: center; border-bottom: 1px solid #252d3e; color: #858fa4; display: flex; font: 700 .65rem/1 ui-monospace, monospace; justify-content: space-between; letter-spacing: .1em; padding: .62rem .9rem; }
@@ -116,11 +115,9 @@
   .participants-panel { border-left: 0; border-top: 1px solid var(--border); max-height: 135px; }
   .participants-list { display: flex; flex-wrap: wrap; }
   .participants-list li { width: 50%; }
-  .version-label, .editor-status span:not(:first-child) { display: none; }
   .run-button { font-size: 0; padding: .45rem .57rem; }
   .run-button span { font-size: .7rem; margin: 0; }
   .output-toggle { font-size: 0; padding: .45rem .57rem; }.output-toggle span { font-size: .8rem; margin: 0; }
-  .recovery-draft { grid-template-columns: 1fr; padding: .7rem .8rem; }
 }
 
 @media (max-width: 380px) {

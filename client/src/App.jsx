@@ -3,28 +3,55 @@ import { EditorPane } from './components/EditorPane.jsx';
 import { LanguageSelector } from './components/LanguageSelector.jsx';
 import { ParticipantsList } from './components/ParticipantsList.jsx';
 import { RoomJoinModal } from './components/RoomJoinModal.jsx';
+import { SocketYjsProvider } from './collab/SocketYjsProvider.js';
 import { getFileExtension } from './constants/languages.js';
 import { socket } from './socket.js';
 
+const TOO_LARGE_MESSAGE = 'That change is too large to share (the limit is 100,000 characters), so your editor was reset to the shared version.';
 const savedName = window.localStorage.getItem('collabcode-name') || `Guest ${Math.floor(100 + Math.random() * 900)}`;
 
 export default function App() {
   const [connectionState, setConnectionState] = useState(socket.connected ? 'connected' : 'connecting');
   const [room, setRoom] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [remoteCursors, setRemoteCursors] = useState({});
   const [notice, setNotice] = useState('');
   const [joinError, setJoinError] = useState('');
-  const [recoveryDraft, setRecoveryDraft] = useState('');
-  const [syncKey, setSyncKey] = useState(0);
+  const [provider, setProvider] = useState(null);
   const [runRequest, setRunRequest] = useState(0);
   const [isOutputOpen, setIsOutputOpen] = useState(false);
   const requestedRoomRef = useRef(null);
   const roomRef = useRef(null);
+  const providerRef = useRef(null);
 
   useEffect(() => {
     roomRef.current = room;
   }, [room]);
+
+  // The provider (the room's shared Yjs document) lives here rather than in EditorPane so its
+  // socket listeners exist before the server's first sync message arrives after room-sync.
+  function replaceProvider(roomId) {
+    providerRef.current?.destroy();
+    const next = roomId ? new SocketYjsProvider(socket, roomId) : null;
+    providerRef.current = next;
+    setProvider(next);
+    return next;
+  }
+
+  // Throws away the local copy and loads the shared document again.
+  function resetProvider() {
+    const roomId = providerRef.current?.roomId;
+    if (roomId) replaceProvider(roomId).start();
+  }
+
+  useEffect(() => {
+    if (!provider) return undefined;
+    return provider.on('too-large', () => {
+      setNotice(TOO_LARGE_MESSAGE);
+      resetProvider();
+    });
+  }, [provider]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => () => providerRef.current?.destroy(), []);
 
   useEffect(() => {
     if (!room) return undefined;
@@ -54,23 +81,23 @@ export default function App() {
 
     function handleRoomSync(snapshot) {
       const previous = roomRef.current;
-      // Rejoining and finding an older version than ours means the server lost recent changes;
-      // keep our language so EditorPane can restore the code under the right mode.
-      const serverLostRoom = previous?.id === snapshot.roomId && previous.version > snapshot.version;
+      let current = providerRef.current;
+      if (current?.roomId !== snapshot.roomId) current = replaceProvider(snapshot.roomId);
+
+      // The server has never seen this room but we still hold its code, so it lost the room
+      // (for example, it expired). Yjs restores the code; keep our language as well.
+      const serverLostRoom = previous?.id === snapshot.roomId && snapshot.version === 0 && current.text.length > 0;
       const language = serverLostRoom ? previous.language : snapshot.language;
       if (serverLostRoom && language !== snapshot.language) socket.emit('language-change', { roomId: snapshot.roomId, language });
 
       setRoom((current) => ({
         id: snapshot.roomId,
         name: requestedRoomRef.current?.name || current?.name || savedName,
-        content: snapshot.content,
-        version: snapshot.version,
         language,
       }));
       setParticipants(snapshot.participants);
-      setRemoteCursors({});
-      setSyncKey((value) => value + 1);
       setJoinError('');
+      current.start();
     }
 
     function handleParticipantJoined(participant) {
@@ -79,16 +106,6 @@ export default function App() {
 
     function handleParticipantLeft({ socketId }) {
       setParticipants((current) => current.filter((participant) => participant.socketId !== socketId));
-      setRemoteCursors((current) => {
-        const next = { ...current };
-        delete next[socketId];
-        return next;
-      });
-    }
-
-    function handleRemoteCursor(cursor) {
-      if (cursor.socketId === socket.id) return;
-      setRemoteCursors((current) => ({ ...current, [cursor.socketId]: cursor }));
     }
 
     function handleLanguageChanged({ language }) {
@@ -105,15 +122,20 @@ export default function App() {
       setNotice(message);
     }
 
+    function handleDocumentError({ message, reset }) {
+      setNotice(message);
+      if (reset) resetProvider();
+    }
+
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
     socket.on('room-sync', handleRoomSync);
     socket.on('participant-joined', handleParticipantJoined);
     socket.on('participant-left', handleParticipantLeft);
-    socket.on('remote-cursor', handleRemoteCursor);
     socket.on('language-changed', handleLanguageChanged);
     socket.on('room-error', handleRoomError);
     socket.on('server-error', handleServerError);
+    socket.on('document-error', handleDocumentError);
     socket.connect();
 
     return () => {
@@ -122,13 +144,13 @@ export default function App() {
       socket.off('room-sync', handleRoomSync);
       socket.off('participant-joined', handleParticipantJoined);
       socket.off('participant-left', handleParticipantLeft);
-      socket.off('remote-cursor', handleRemoteCursor);
       socket.off('language-changed', handleLanguageChanged);
       socket.off('room-error', handleRoomError);
       socket.off('server-error', handleServerError);
+      socket.off('document-error', handleDocumentError);
       socket.disconnect();
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function joinRoom({ roomId, name }) {
     if (!roomId || !name) return;
@@ -140,14 +162,13 @@ export default function App() {
   }
 
   function leaveRoom() {
+    replaceProvider(null);
     socket.emit('leave-room');
     requestedRoomRef.current = null;
     setRoom(null);
     setParticipants([]);
-    setRemoteCursors({});
     setNotice('');
     setJoinError('');
-    setRecoveryDraft('');
   }
 
   function changeLanguage(language) {
@@ -156,17 +177,7 @@ export default function App() {
     socket.emit('language-change', { roomId: room.id, language });
   }
 
-  async function copyRecoveryDraft() {
-    try {
-      if (!navigator.clipboard) throw new Error('Clipboard access is unavailable.');
-      await navigator.clipboard.writeText(recoveryDraft);
-      setNotice('Unsynced draft copied to your clipboard.');
-    } catch {
-      setNotice('Copy failed. Select the draft text and copy it manually.');
-    }
-  }
-
-  if (!room) {
+  if (!room || !provider) {
     return <RoomJoinModal defaultName={savedName} onJoin={joinRoom} connectionState={connectionState} errorMessage={joinError} />;
   }
 
@@ -176,7 +187,6 @@ export default function App() {
         <button className="wordmark" type="button" onClick={leaveRoom} title="Leave workspace" aria-label="CollabCode, leave workspace">&lt;/&gt; <span>collab<span>code</span></span></button>
         <div className="room-crumb"><span className={`connection-indicator ${connectionState}`}><i /> {connectionState === 'connected' ? 'Live' : 'Reconnecting'}</span><span className="slash">/</span><span>{room.id}</span></div>
         <div className="header-actions">
-          <span className="version-label">v{room.version}</span>
           <LanguageSelector language={room.language} onChange={changeLanguage} />
           <button className="run-button" type="button" title="Run code (Ctrl+Enter)" aria-keyshortcuts="Control+Enter Meta+Enter" onClick={() => setRunRequest((value) => value + 1)}>
             <span aria-hidden="true">&#9654;</span> Run code
@@ -189,29 +199,16 @@ export default function App() {
       </header>
 
       {notice && <div className="notice" role="status">{notice}<button type="button" onClick={() => setNotice('')} aria-label="Dismiss notice">&times;</button></div>}
-      {recoveryDraft && (
-        <section className="recovery-draft" aria-label="Recovered local draft">
-          <div><strong>Unsynced draft preserved.</strong><span>A concurrent update arrived before your edits could be synced. Copy this draft before continuing.</span></div>
-          <textarea readOnly value={recoveryDraft} aria-label="Unsynced local draft" />
-          <div className="recovery-actions"><button type="button" onClick={copyRecoveryDraft}>Copy draft</button><button type="button" onClick={() => setRecoveryDraft('')}>Dismiss</button></div>
-        </section>
-      )}
-
       <section className="workspace-main">
         <div className="editor-column">
           <div className="file-tab"><span className="file-dot" /> untitled.{getFileExtension(room.language)}</div>
           <EditorPane
             key={room.id}
             room={room}
-            syncKey={syncKey}
+            provider={provider}
             runRequest={runRequest}
             isOutputOpen={isOutputOpen}
-            remoteCursors={remoteCursors}
-            onVersionChange={(version) => setRoom((current) => current ? { ...current, version } : current)}
-            onLanguageResync={(language) => setRoom((current) => current && language ? { ...current, language } : current)}
-            onRecoveryDraft={(draft) => setRecoveryDraft((current) => current || draft)}
             onOutputVisibilityChange={setIsOutputOpen}
-            onNotice={setNotice}
             onRunShortcut={() => setRunRequest((value) => value + 1)}
           />
           <footer className="editor-status"><span><i className={`status-dot ${connectionState}`} /> {connectionState === 'connected' ? 'Synced' : 'Offline changes protected'}</span><span>UTF-8</span><span>Spaces: 2</span><span>{room.language}</span></footer>
