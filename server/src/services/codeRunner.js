@@ -117,9 +117,27 @@ function runInDocker(workingDirectory, runner) {
         reject(new CodeRunnerError(`Execution stopped after ${RUN_TIMEOUT_MS / 1000} seconds.`, 408));
         return;
       }
+      const dockerFailure = classifyDockerFailure(exitCode, stderr);
+      if (dockerFailure) {
+        reject(dockerFailure);
+        return;
+      }
       resolve({ stdout, stderr, exitCode });
     });
   });
+}
+
+// The docker CLI exits non-zero with its own message when the daemon is down or the
+// container cannot start; that text must not be shown as if the user's program wrote it.
+export function classifyDockerFailure(exitCode, stderr) {
+  if (exitCode === 0) return null;
+  if (/failed to connect to the docker API|Cannot connect to the Docker daemon|error during connect|docker daemon is not running/i.test(stderr)) {
+    return new CodeRunnerError('Docker Desktop is not running. Start Docker Desktop and try again.', 503);
+  }
+  if (exitCode === 125 && /^docker: /m.test(stderr)) {
+    return new CodeRunnerError('Docker could not start the runner container. Check that Docker can pull the runner image and try again.', 503);
+  }
+  return null;
 }
 
 function appendOutput(current, chunk) {
