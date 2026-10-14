@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { createApp } from './app.js';
 import { createOriginMatcher, toCorsOrigin } from './config/origins.js';
 import { openDatabase } from './db/database.js';
+import { createChatRepository } from './models/chatRepository.js';
 import { createRoomRepository } from './models/roomRepository.js';
 import { createCodeRunner } from './services/codeRunner.js';
 import { createRoomService } from './services/roomService.js';
@@ -16,6 +17,7 @@ export async function startServer({ config, logger, runCode = createCodeRunner(c
   const db = openDatabase(config.databasePath, { logger });
   const roomService = createRoomService({
     repository: createRoomRepository(db),
+    chatRepository: createChatRepository(db),
     logger,
     maxParticipants: config.rooms.maxParticipants,
     emptyRoomTtlMs: config.rooms.emptyRoomTtlMs,

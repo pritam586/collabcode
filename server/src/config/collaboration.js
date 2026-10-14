@@ -20,3 +20,4 @@ export const MAX_YJS_MESSAGE_BYTES = 1_000_000;
 export const SOCKET_BUFFER_BYTES = 1_100_000;
 // Largest JSON awareness state (cursor and typing flags) accepted per client.
 export const MAX_AWARENESS_STATE_LENGTH = 2_000;
+export const MAX_CHAT_MESSAGE_LENGTH = 1_000;

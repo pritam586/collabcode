@@ -6,6 +6,8 @@ import { assignColor } from '../utils/colorAssigner.js';
 import { filterAwarenessUpdate } from './awarenessFilter.js';
 
 const DEFAULT_LANGUAGE = 'javascript';
+const CHAT_HISTORY_LENGTH = 50;
+const CHAT_MESSAGES_KEPT = 500;
 export const TEXT_NAME = 'content';
 // Transaction origins that are not a client socket. Updates with these origins are not broadcast.
 const STORAGE_ORIGIN = 'storage';
@@ -22,6 +24,7 @@ export const SERVER_ORIGIN = 'server';
 // `origin` is the socket id that caused the change, or SERVER_ORIGIN.
 export function createRoomService({
   repository = null,
+  chatRepository = null,
   logger,
   maxParticipants = 10,
   emptyRoomTtlMs = 30 * 60 * 1000,
@@ -71,6 +74,8 @@ export function createRoomService({
       lastActiveAt: timestamp,
       participants: new Map(),
       persisted: Boolean(stored),
+      // The latest chat messages, oldest first, sent to people as they join.
+      messages: stored && chatRepository ? chatRepository.recent(roomId, CHAT_HISTORY_LENGTH) : [],
     };
 
     doc.on('update', (update, origin) => {
@@ -214,6 +219,40 @@ export function createRoomService({
       return true;
     },
 
+    // Stores a chat message from a participant. The author's name and color come from the
+    // server's record, never from the client. Returns the message, or null.
+    postMessage(roomId, socketId, body) {
+      const room = rooms.get(roomId);
+      const participant = room?.participants.get(socketId);
+      if (!participant) return null;
+
+      const message = {
+        id: 0,
+        author: { name: participant.name, color: participant.color, socketId },
+        body,
+        createdAt: now(),
+      };
+
+      markChanged(room);
+      if (repository && chatRepository) {
+        // The message references the room row, so make sure it exists first.
+        save([room.id]);
+        if (!room.persisted) return null;
+        try {
+          message.id = chatRepository.add({ roomId, authorName: participant.name, authorColor: participant.color, body, createdAt: message.createdAt });
+          if (message.id % 50 === 0) chatRepository.trim(roomId, CHAT_MESSAGES_KEPT);
+        } catch (error) {
+          logger?.error({ err: error, roomId }, 'Failed to save chat message');
+          return null;
+        }
+      } else {
+        message.id = (room.messages.at(-1)?.id ?? 0) + 1;
+      }
+
+      room.messages = [...room.messages, message].slice(-CHAT_HISTORY_LENGTH);
+      return message;
+    },
+
     setLanguage(roomId, language) {
       const room = rooms.get(roomId);
       if (!room) return false;
@@ -230,6 +269,7 @@ export function createRoomService({
           socketId,
           ...participant,
         })),
+        messages: room.messages,
       };
     },
 

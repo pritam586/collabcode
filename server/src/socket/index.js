@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import { encodeAwarenessUpdate } from 'y-protocols/awareness';
 import { SOCKET_BUFFER_BYTES } from '../config/collaboration.js';
+import { registerChatHandlers } from './chatHandlers.js';
 import { registerLanguageHandlers } from './languageHandlers.js';
 import { limitEvents } from './limitEvents.js';
 import { registerRoomHandlers } from './roomHandlers.js';
@@ -36,6 +37,7 @@ export function createSocketServer(httpServer, { corsOrigin, isAllowedOrigin, ro
     registerRoomHandlers(io, socket, context);
     registerYjsHandlers(io, socket, context);
     registerLanguageHandlers(io, socket, context);
+    registerChatHandlers(io, socket, context);
   });
 
   return io;

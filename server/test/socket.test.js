@@ -287,3 +287,107 @@ test('sockets that flood events are throttled, then resynced once the window res
     await server.close();
   }
 });
+
+describe('chat', () => {
+  let server;
+  const clients = [];
+  const client = () => {
+    const created = new YjsTestClient(server.url);
+    clients.push(created);
+    return created;
+  };
+
+  before(async () => {
+    server = await startTestServer();
+  });
+  after(() => server.close());
+  afterEach(() => {
+    for (const created of clients.splice(0)) created.close();
+  });
+
+  test('messages reach everyone with the server-assigned author and time', async () => {
+    const ada = client();
+    const grace = client();
+    await ada.join('chat-room', 'Ada');
+    await grace.join('chat-room', 'Grace');
+
+    const toAda = ada.waitFor('chat-message');
+    const toGrace = grace.waitFor('chat-message');
+    ada.socket.emit('chat-send', { roomId: 'chat-room', body: '  hello 👋  ', clientId: 'local-1', author: { name: 'Mallory' } });
+    const [own, received] = await Promise.all([toAda, toGrace]);
+    assert.equal(received.body, 'hello 👋');
+    assert.equal(received.author.name, 'Ada');
+    assert.equal(own.clientId, 'local-1');
+    assert.ok(received.id > 0);
+    assert.ok(Math.abs(received.createdAt - Date.now()) < 5000);
+  });
+
+  test('late joiners and restarted servers keep the history', async () => {
+    const ada = client();
+    await ada.join('history-room', 'Ada');
+    for (const body of ['first', 'second']) {
+      const delivered = ada.waitFor('chat-message');
+      ada.socket.emit('chat-send', { roomId: 'history-room', body });
+      await delivered;
+    }
+
+    const grace = client();
+    const snapshot = await grace.join('history-room', 'Grace');
+    assert.deepEqual(snapshot.messages.map((message) => message.body), ['first', 'second']);
+  });
+
+  test('rejects empty, oversized and control-character messages with chat-error', async () => {
+    const ada = client();
+    await ada.join('invalid-chat', 'Ada');
+    for (const body of ['   ', 'x'.repeat(1001), `bad${String.fromCharCode(7)}bell`]) {
+      const error = ada.waitFor('chat-error');
+      ada.socket.emit('chat-send', { roomId: 'invalid-chat', body });
+      assert.ok((await error).message);
+    }
+  });
+
+  test('limits each socket to 10 messages per 10 seconds', async () => {
+    const ada = client();
+    await ada.join('spam-room', 'Ada');
+    let delivered = 0;
+    ada.socket.on('chat-message', () => { delivered += 1; });
+    const error = ada.waitFor('chat-error');
+    for (let index = 0; index < 11; index += 1) ada.socket.emit('chat-send', { roomId: 'spam-room', body: `message ${index}` });
+    assert.match((await error).message, /too quickly/);
+    await ada.until(() => delivered === 10);
+  });
+
+  test('sockets outside the room cannot post', async () => {
+    const member = client();
+    await member.join('closed-chat', 'Ada');
+    const outsider = client();
+    await outsider.waitFor('connect');
+    outsider.socket.emit('chat-send', { roomId: 'closed-chat', body: 'spam' });
+    await pause(150);
+    assert.equal(member.events.filter(({ event }) => event === 'chat-message').length, 0);
+  });
+});
+
+test('chat history survives a server restart', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'collabcode-test-'));
+  const env = { DATABASE_PATH: join(directory, 'rooms.db') };
+  try {
+    const first = await startTestServer({ env });
+    const ada = new YjsTestClient(first.url);
+    await ada.join('durable-chat', 'Ada');
+    const delivered = ada.waitFor('chat-message');
+    ada.socket.emit('chat-send', { roomId: 'durable-chat', body: 'still here?' });
+    await delivered;
+    ada.close();
+    await first.close();
+
+    const second = await startTestServer({ env });
+    const grace = new YjsTestClient(second.url);
+    const snapshot = await grace.join('durable-chat', 'Grace');
+    assert.deepEqual(snapshot.messages.map((message) => [message.author.name, message.body]), [['Ada', 'still here?']]);
+    grace.close();
+    await second.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

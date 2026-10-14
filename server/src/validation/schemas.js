@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  MAX_CHAT_MESSAGE_LENGTH,
   MAX_DISPLAY_NAME_LENGTH,
   MAX_ROOM_ID_LENGTH,
   MAX_YJS_MESSAGE_BYTES,
@@ -45,6 +46,21 @@ const relativePositionSchema = z.object({
 export const awarenessStateSchema = z.object({
   cursor: z.object({ anchor: relativePositionSchema, head: relativePositionSchema }).nullable().optional(),
   typing: z.boolean().optional(),
+});
+
+export const CHAT_MESSAGE_ERROR = `Messages must be 1 to ${MAX_CHAT_MESSAGE_LENGTH.toLocaleString('en-US')} characters.`;
+
+// Line breaks and tabs are allowed in chat; other control characters and bidi overrides are not.
+export const chatSendSchema = z.object({
+  roomId: z.string(),
+  body: z.string()
+    .trim()
+    .normalize('NFC')
+    .min(1, CHAT_MESSAGE_ERROR)
+    .max(MAX_CHAT_MESSAGE_LENGTH, CHAT_MESSAGE_ERROR)
+    .refine((body) => !/[\x00-\x08\x0B-\x1F\x7F\u202A-\u202E\u2066-\u2069]/.test(body), 'Messages cannot contain control characters.'),
+  // Lets the sender match the broadcast copy to the message it is showing as "sending".
+  clientId: z.string().max(64).optional(),
 });
 
 export const languageChangeSchema = z.object({ roomId: z.string(), language: z.enum([...SUPPORTED_LANGUAGES]) });
