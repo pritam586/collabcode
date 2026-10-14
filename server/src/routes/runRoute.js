@@ -1,13 +1,12 @@
 import { CodeRunnerError, runCompiledCode } from '../services/codeRunner.js';
+import { createRateLimiter } from '../utils/rateLimiter.js';
 
-const REQUEST_WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 10;
-const requestCounts = new Map();
+const runLimiter = createRateLimiter({ windowMs: 60_000, maxRequests: 10 });
 
 export function registerRunRoute(app) {
   app.post('/api/run', async (request, response) => {
     const address = request.ip || request.socket.remoteAddress || 'unknown';
-    if (!canRun(address)) {
+    if (!runLimiter.allow(address)) {
       response.status(429).json({ error: 'Too many run requests. Try again in a minute.' });
       return;
     }
@@ -20,15 +19,4 @@ export function registerRunRoute(app) {
       response.status(status).json({ error: error instanceof CodeRunnerError ? error.message : 'The code runner failed unexpectedly.' });
     }
   });
-}
-
-function canRun(address, now = Date.now()) {
-  const activeRequest = requestCounts.get(address);
-  if (!activeRequest || now - activeRequest.startedAt > REQUEST_WINDOW_MS) {
-    requestCounts.set(address, { startedAt: now, count: 1 });
-    return true;
-  }
-  if (activeRequest.count >= MAX_REQUESTS_PER_WINDOW) return false;
-  activeRequest.count += 1;
-  return true;
 }
