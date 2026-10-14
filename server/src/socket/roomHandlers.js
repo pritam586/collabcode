@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { MAX_DISPLAY_NAME_LENGTH, MAX_ROOM_ID_LENGTH } from '../config/collaboration.js';
 import { joinRoomSchema } from '../validation/schemas.js';
 import { createEventHandler } from './createEventHandler.js';
+import { sendSyncStep1 } from './yjsHandlers.js';
 
 const INVALID_JOIN_MESSAGE = `Use a room ID up to ${MAX_ROOM_ID_LENGTH} characters (letters, numbers, dots, dashes, or underscores) and a display name up to ${MAX_DISPLAY_NAME_LENGTH} characters.`;
 
@@ -21,6 +22,9 @@ export function registerRoomHandlers(io, socket, { roomService, logger }) {
     socket.data.roomId = roomId;
     socket.emit('room-sync', { roomId, ...roomService.snapshot(result.room) });
     socket.to(roomId).emit('participant-joined', { socketId: socket.id, ...result.participant });
+
+    // Cursors are sent when the client asks for the document (its sync step 1).
+    sendSyncStep1(socket, result.room);
   }, { onInvalid: () => socket.emit('room-error', { message: INVALID_JOIN_MESSAGE }) });
 
   on('leave-room', z.any(), () => leaveCurrentRoom(socket, roomService));

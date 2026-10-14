@@ -7,6 +7,7 @@ import { createRoomRepository } from '../src/models/roomRepository.js';
 const room = (id, overrides = {}) => ({
   id,
   content: `content of ${id}`,
+  ydoc: null,
   language: 'python',
   docVersion: 3,
   createdAt: 1000,
@@ -44,6 +45,12 @@ test('saves, updates and finds rooms', () => {
   assert.equal(updated.docVersion, 4);
   assert.equal(updated.createdAt, 1000, 'created_at is never overwritten');
   assert.equal(repository.count(), 2);
+});
+
+test('stores and returns the Yjs document blob', () => {
+  const repository = createRoomRepository(openDatabase(':memory:'));
+  repository.saveMany([room('a', { ydoc: new Uint8Array([1, 2, 3]) })]);
+  assert.deepEqual([...repository.find('a').ydoc], [1, 2, 3]);
 });
 
 test('deletes inactive rooms except the ones still open', () => {

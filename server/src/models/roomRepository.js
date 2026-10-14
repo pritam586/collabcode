@@ -4,10 +4,11 @@ import { transaction } from '../db/database.js';
 export function createRoomRepository(db) {
   const findStatement = db.prepare('SELECT * FROM rooms WHERE id = ?');
   const upsertStatement = db.prepare(`
-    INSERT INTO rooms (id, content, language, doc_version, created_at, updated_at, last_active_at)
-    VALUES (:id, :content, :language, :docVersion, :createdAt, :updatedAt, :lastActiveAt)
+    INSERT INTO rooms (id, content, ydoc, language, doc_version, created_at, updated_at, last_active_at)
+    VALUES (:id, :content, :ydoc, :language, :docVersion, :createdAt, :updatedAt, :lastActiveAt)
     ON CONFLICT (id) DO UPDATE SET
       content = excluded.content,
+      ydoc = excluded.ydoc,
       language = excluded.language,
       doc_version = excluded.doc_version,
       updated_at = excluded.updated_at,
@@ -28,6 +29,7 @@ export function createRoomRepository(db) {
           upsertStatement.run({
             id: room.id,
             content: room.content,
+            ydoc: room.ydoc ?? null,
             language: room.language,
             docVersion: room.docVersion,
             createdAt: room.createdAt,
@@ -53,6 +55,7 @@ function toRoom(row) {
   return {
     id: row.id,
     content: row.content,
+    ydoc: row.ydoc ?? null,
     language: row.language,
     docVersion: Number(row.doc_version),
     createdAt: Number(row.created_at),

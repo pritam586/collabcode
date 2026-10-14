@@ -1,12 +1,25 @@
-import { deltaSchema } from '../validation/schemas.js';
+import { EventEmitter } from 'node:events';
+import { applyAwarenessUpdate, Awareness, removeAwarenessStates } from 'y-protocols/awareness';
+import * as Y from 'yjs';
+import { MAX_DOCUMENT_LENGTH } from '../config/collaboration.js';
 import { assignColor } from '../utils/colorAssigner.js';
-import { applyDeltaToString } from '../utils/textDelta.js';
+import { filterAwarenessUpdate } from './awarenessFilter.js';
 
 const DEFAULT_LANGUAGE = 'javascript';
+export const TEXT_NAME = 'content';
+// Transaction origins that are not a client socket. Updates with these origins are not broadcast.
+const STORAGE_ORIGIN = 'storage';
+export const SERVER_ORIGIN = 'server';
 
-// Owns every room's live state. Open rooms (and their participants) live in memory; document
-// content and language are written to the repository shortly after each change, when the last
-// participant leaves, and on shutdown. Without a repository rooms are memory-only.
+// Owns every room's live state. Each open room holds a Yjs document (the shared text) and a
+// Yjs awareness instance (cursors, typing). Documents are written to the repository shortly
+// after each change, when the last participant leaves, and on shutdown. Without a repository
+// rooms are memory-only.
+//
+// Events (subscribe with service.on):
+//   'document-update'  (room, update, origin)   a Yjs update was applied to room.doc
+//   'awareness-update' (room, clientIds, origin) awareness states changed
+// `origin` is the socket id that caused the change, or SERVER_ORIGIN.
 export function createRoomService({
   repository = null,
   logger,
@@ -20,6 +33,7 @@ export function createRoomService({
   const rooms = new Map();
   const dirtyRoomIds = new Set();
   const timers = [];
+  const events = new EventEmitter();
 
   function openRoom(roomId) {
     let room = rooms.get(roomId);
@@ -27,10 +41,30 @@ export function createRoomService({
 
     const stored = repository?.find(roomId);
     const timestamp = now();
+    const doc = new Y.Doc();
+    const text = doc.getText(TEXT_NAME);
+    if (stored?.ydoc) {
+      Y.applyUpdate(doc, stored.ydoc, STORAGE_ORIGIN);
+      if (removeCarriageReturns(doc, text)) dirtyRoomIds.add(roomId);
+    } else if (stored?.content) {
+      // Saved before rooms were stored as Yjs documents; convert on first open.
+      doc.transact(() => text.insert(0, stored.content.replace(/\r\n?/g, '\n')), STORAGE_ORIGIN);
+      dirtyRoomIds.add(roomId);
+    }
+
+    const awareness = new Awareness(doc);
+    // The server is not a participant, so it publishes no awareness state of its own.
+    awareness.setLocalState(null);
+
     room = {
       id: roomId,
-      content: stored?.content ?? '',
+      doc,
+      text,
+      awareness,
+      // Awareness client id -> socket id, so a socket can only change its own cursor.
+      awarenessOwners: new Map(),
       language: stored?.language ?? DEFAULT_LANGUAGE,
+      // Counts applied updates; shown to clients as a change counter.
       docVersion: stored?.docVersion ?? 0,
       createdAt: stored?.createdAt ?? timestamp,
       updatedAt: stored?.updatedAt ?? timestamp,
@@ -38,8 +72,25 @@ export function createRoomService({
       participants: new Map(),
       persisted: Boolean(stored),
     };
+
+    doc.on('update', (update, origin) => {
+      if (origin === STORAGE_ORIGIN) return;
+      room.docVersion += 1;
+      markChanged(room);
+      events.emit('document-update', room, update, origin);
+    });
+    awareness.on('update', ({ added, updated, removed }, origin) => {
+      events.emit('awareness-update', room, [...added, ...updated, ...removed], origin);
+    });
+
     rooms.set(roomId, room);
     return room;
+  }
+
+  function closeRoom(room) {
+    room.awareness.destroy();
+    room.doc.destroy();
+    rooms.delete(room.id);
   }
 
   function markChanged(room) {
@@ -53,7 +104,16 @@ export function createRoomService({
     if (!repository || roomIds.length === 0) return;
     const toSave = roomIds.map((id) => rooms.get(id)).filter(Boolean);
     try {
-      repository.saveMany(toSave);
+      repository.saveMany(toSave.map((room) => ({
+        id: room.id,
+        content: room.text.toString(),
+        ydoc: Y.encodeStateAsUpdate(room.doc),
+        language: room.language,
+        docVersion: room.docVersion,
+        createdAt: room.createdAt,
+        updatedAt: room.updatedAt,
+        lastActiveAt: room.lastActiveAt,
+      })));
       for (const room of toSave) {
         room.persisted = true;
         dirtyRoomIds.delete(room.id);
@@ -64,7 +124,30 @@ export function createRoomService({
     }
   }
 
+  // A Yjs update cannot be undone once applied, so updates that might break a rule are tried
+  // on a copy first. Inserted characters can never outnumber the update's bytes, and an update
+  // without a 0x0D byte cannot insert "\r", so most updates skip the trial.
+  // Returns 'ok', 'too-large' or 'invalid'.
+  function checkUpdate(room, update) {
+    const mayAddCarriageReturn = update.includes(0x0d);
+    if (!mayAddCarriageReturn && room.text.length + update.byteLength <= MAX_DOCUMENT_LENGTH) return 'ok';
+
+    const trial = new Y.Doc();
+    try {
+      Y.applyUpdate(trial, Y.encodeStateAsUpdate(room.doc));
+      Y.applyUpdate(trial, update);
+      const trialText = trial.getText(TEXT_NAME).toString();
+      if (trialText.length > MAX_DOCUMENT_LENGTH) return 'too-large';
+      // Editors count each line break as one character; a "\r" would shift every offset after it.
+      return trialText.includes('\r') ? 'invalid' : 'ok';
+    } finally {
+      trial.destroy();
+    }
+  }
+
   const service = {
+    on: (event, listener) => events.on(event, listener),
+
     getRoom(roomId) {
       return rooms.get(roomId);
     },
@@ -75,7 +158,7 @@ export function createRoomService({
         return { ok: false, reason: 'full', maxParticipants };
       }
 
-      const participant = { name, color: assignColor(room), cursor: null };
+      const participant = { name, color: assignColor(room) };
       room.participants.set(socketId, participant);
       room.lastActiveAt = now();
       return { ok: true, room, participant };
@@ -85,26 +168,50 @@ export function createRoomService({
       const room = rooms.get(roomId);
       if (!room || !room.participants.delete(socketId)) return false;
 
+      const ownedClientIds = [...room.awarenessOwners].filter(([, owner]) => owner === socketId).map(([clientId]) => clientId);
+      for (const clientId of ownedClientIds) room.awarenessOwners.delete(clientId);
+      if (ownedClientIds.length > 0) removeAwarenessStates(room.awareness, ownedClientIds, SERVER_ORIGIN);
+
       room.lastActiveAt = now();
       // Save right away when the room empties so its content and visit time survive eviction.
       if (room.participants.size === 0 && (room.persisted || dirtyRoomIds.has(room.id))) save([room.id]);
       return true;
     },
 
-    // Returns { status: 'accepted', version, delta } or { status: 'stale' | 'invalid' }.
-    applyChange(roomId, version, delta) {
+    // Applies a Yjs update from a client. Returns { status: 'accepted' | 'too-large' | 'invalid' }.
+    applyUpdate(roomId, update, origin) {
       const room = rooms.get(roomId);
       if (!room) return { status: 'invalid' };
-      if (version !== room.docVersion) return { status: 'stale' };
+      try {
+        const check = checkUpdate(room, update);
+        if (check !== 'ok') return { status: check };
+        Y.applyUpdate(room.doc, update, origin);
+        return { status: 'accepted' };
+      } catch (error) {
+        logger?.warn({ err: error, roomId }, 'Rejected malformed Yjs update');
+        return { status: 'invalid' };
+      }
+    },
 
-      const parsedDelta = deltaSchema.safeParse(delta);
-      const updatedContent = parsedDelta.success ? applyDeltaToString(room.content, parsedDelta.data) : null;
-      if (updatedContent === null) return { status: 'invalid' };
+    // Applies a client's awareness update after binding it to the sender's identity.
+    applyAwareness(roomId, socketId, update) {
+      const room = rooms.get(roomId);
+      const participant = room?.participants.get(socketId);
+      if (!participant) return false;
 
-      room.content = updatedContent;
-      room.docVersion += 1;
-      markChanged(room);
-      return { status: 'accepted', version: room.docVersion, delta: parsedDelta.data };
+      let filtered;
+      try {
+        filtered = filterAwarenessUpdate(update, {
+          socketId,
+          user: { socketId, name: participant.name, color: participant.color },
+          owners: room.awarenessOwners,
+        });
+      } catch {
+        return false;
+      }
+      if (!filtered) return false;
+      applyAwarenessUpdate(room.awareness, filtered, socketId);
+      return true;
     },
 
     setLanguage(roomId, language) {
@@ -115,16 +222,8 @@ export function createRoomService({
       return true;
     },
 
-    updateCursor(roomId, socketId, position) {
-      const participant = rooms.get(roomId)?.participants.get(socketId);
-      if (!participant) return null;
-      participant.cursor = position;
-      return participant;
-    },
-
     snapshot(room) {
       return {
-        content: room.content,
         version: room.docVersion,
         language: room.language,
         participants: [...room.participants.entries()].map(([socketId, participant]) => ({
@@ -143,9 +242,9 @@ export function createRoomService({
     sweep() {
       const timestamp = now();
       service.flush();
-      for (const [roomId, room] of rooms) {
+      for (const room of [...rooms.values()]) {
         const idle = room.participants.size === 0 && timestamp - room.lastActiveAt > emptyRoomTtlMs;
-        if (idle && !dirtyRoomIds.has(roomId)) rooms.delete(roomId);
+        if (idle && !dirtyRoomIds.has(room.id)) closeRoom(room);
       }
 
       if (!repository) return;
@@ -166,6 +265,7 @@ export function createRoomService({
     close() {
       for (const timer of timers.splice(0)) clearInterval(timer);
       service.flush();
+      for (const room of [...rooms.values()]) closeRoom(room);
     },
 
     stats() {
@@ -176,4 +276,19 @@ export function createRoomService({
   };
 
   return service;
+}
+
+// Rewrites "\r\n" and lone "\r" in stored text as "\n" (rooms saved by Windows clients before
+// line endings were normalized). Returns true if anything changed.
+function removeCarriageReturns(doc, text) {
+  const value = text.toString();
+  if (!value.includes('\r')) return false;
+  doc.transact(() => {
+    for (let index = value.length - 1; index >= 0; index -= 1) {
+      if (value[index] !== '\r') continue;
+      text.delete(index, 1);
+      if (value[index + 1] !== '\n') text.insert(index, '\n');
+    }
+  }, STORAGE_ORIGIN);
+  return true;
 }

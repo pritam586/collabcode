@@ -1,12 +1,15 @@
 import { Server } from 'socket.io';
-import { registerCodeHandlers } from './codeHandlers.js';
-import { registerCursorHandlers } from './cursorHandlers.js';
+import { encodeAwarenessUpdate } from 'y-protocols/awareness';
+import { SOCKET_BUFFER_BYTES } from '../config/collaboration.js';
+import { registerLanguageHandlers } from './languageHandlers.js';
 import { limitEvents } from './limitEvents.js';
 import { registerRoomHandlers } from './roomHandlers.js';
+import { registerYjsHandlers } from './yjsHandlers.js';
+import { encodeUpdate } from './yjsProtocol.js';
 
 export function createSocketServer(httpServer, { corsOrigin, isAllowedOrigin, roomService, logger, eventLimit }) {
   const io = new Server(httpServer, {
-    maxHttpBufferSize: 110_000,
+    maxHttpBufferSize: SOCKET_BUFFER_BYTES,
     cors: {
       origin: corsOrigin,
       methods: ['GET', 'POST'],
@@ -18,12 +21,21 @@ export function createSocketServer(httpServer, { corsOrigin, isAllowedOrigin, ro
     },
   });
 
+  // Relay every accepted change to the rest of the room. The sender already has it.
+  const roomExceptOrigin = (room, origin) => (io.sockets.sockets.has(origin) ? io.to(room.id).except(origin) : io.to(room.id));
+  roomService.on('document-update', (room, update, origin) => {
+    roomExceptOrigin(room, origin).emit('yjs-sync', { roomId: room.id, data: encodeUpdate(update) });
+  });
+  roomService.on('awareness-update', (room, clientIds, origin) => {
+    roomExceptOrigin(room, origin).emit('yjs-awareness', { roomId: room.id, data: encodeAwarenessUpdate(room.awareness, clientIds) });
+  });
+
   const context = { roomService, logger };
   io.on('connection', (socket) => {
     limitEvents(socket, { roomService, logger, ...eventLimit });
     registerRoomHandlers(io, socket, context);
-    registerCodeHandlers(io, socket, context);
-    registerCursorHandlers(io, socket, context);
+    registerYjsHandlers(io, socket, context);
+    registerLanguageHandlers(io, socket, context);
   });
 
   return io;

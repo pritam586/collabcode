@@ -1,14 +1,13 @@
 import { z } from 'zod';
 import {
-  MAX_DELTA_TEXT_LENGTH,
   MAX_DISPLAY_NAME_LENGTH,
   MAX_ROOM_ID_LENGTH,
+  MAX_YJS_MESSAGE_BYTES,
   SUPPORTED_LANGUAGES,
 } from '../config/collaboration.js';
 import { getSupportedRunLanguages, MAX_RUN_CODE_LENGTH } from '../services/codeRunner.js';
 
 // Every schema is a z.object, which drops unknown keys, so handlers only ever see known fields.
-const positiveInt = z.number().int().positive();
 
 export const roomIdSchema = z.string().trim().min(1).max(MAX_ROOM_ID_LENGTH).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
 
@@ -19,32 +18,34 @@ export const displayNameSchema = z.string()
   .normalize('NFC')
   .min(1)
   .max(MAX_DISPLAY_NAME_LENGTH)
-  .regex(/^[^\u0000-\u001F\u007F‪-‮⁦-⁩]+$/);
+  .regex(/^[^\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]+$/);
 
 export const joinRoomSchema = z.object({ roomId: roomIdSchema, name: displayNameSchema });
 
 export const roomRefSchema = z.object({ roomId: z.string() });
 
-export const rangeSchema = z.object({
-  startLineNumber: positiveInt,
-  startColumn: positiveInt,
-  endLineNumber: positiveInt,
-  endColumn: positiveInt,
+// One Yjs sync or awareness message (y-protocols encoding). Socket.io delivers binary as a
+// Buffer on the server, which is a Uint8Array.
+export const yjsMessageSchema = z.object({
+  roomId: z.string(),
+  data: z.instanceof(Uint8Array).refine((data) => data.byteLength > 0 && data.byteLength <= MAX_YJS_MESSAGE_BYTES),
 });
 
-export const deltaSchema = z.object({ range: rangeSchema, text: z.string().max(MAX_DELTA_TEXT_LENGTH) });
+// A Yjs RelativePosition in its JSON form (Y.relativePositionToJSON).
+const yjsId = z.object({ client: z.number().int().nonnegative(), clock: z.number().int().nonnegative() });
+const relativePositionSchema = z.object({
+  type: yjsId.nullable().optional(),
+  tname: z.string().max(64).nullable().optional(),
+  item: yjsId.nullable().optional(),
+  assoc: z.number().int().optional(),
+});
 
-// version and delta are checked by the room service so that a stale version or a bad delta
-// still gets a resync reply instead of being silently dropped.
-export const codeChangeSchema = z.object({ roomId: z.string(), version: z.unknown(), delta: z.unknown() });
-
-export const selectionSchema = rangeSchema.refine(
-  (range) => range.startLineNumber < range.endLineNumber
-    || (range.startLineNumber === range.endLineNumber && range.startColumn <= range.endColumn),
-  'Selection start must come before its end.',
-);
-
-export const cursorUpdateSchema = z.object({ roomId: z.string(), position: selectionSchema });
+// The parts of a client's awareness state the server accepts. The 'user' field is always
+// replaced by the server's own record of the participant.
+export const awarenessStateSchema = z.object({
+  cursor: z.object({ anchor: relativePositionSchema, head: relativePositionSchema }).nullable().optional(),
+  typing: z.boolean().optional(),
+});
 
 export const languageChangeSchema = z.object({ roomId: z.string(), language: z.enum([...SUPPORTED_LANGUAGES]) });
 
