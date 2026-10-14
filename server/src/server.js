@@ -9,7 +9,7 @@ import { createSocketServer } from './socket/index.js';
 
 // Builds and starts the HTTP + Socket.io server. Tests call this with port 0 and their own
 // config; src/index.js calls it with the environment's config.
-export async function startServer({ config, logger, runCode = createCodeRunner(config.runner) }) {
+export async function startServer({ config, logger, runCode = createCodeRunner(config.runner), eventLimit }) {
   const isAllowedOrigin = createOriginMatcher({ clientOrigin: config.clientOrigin, nodeEnv: config.env });
   const corsOrigin = toCorsOrigin(isAllowedOrigin);
 
@@ -33,7 +33,7 @@ export async function startServer({ config, logger, runCode = createCodeRunner(c
 
   const app = createApp({ config, logger, corsOrigin, runCode, healthChecks });
   const httpServer = createServer(app);
-  const io = createSocketServer(httpServer, { corsOrigin, isAllowedOrigin, roomService, logger });
+  const io = createSocketServer(httpServer, { corsOrigin, isAllowedOrigin, roomService, logger, eventLimit });
 
   await new Promise((resolve, reject) => {
     httpServer.once('error', reject);
@@ -51,7 +51,9 @@ export async function startServer({ config, logger, runCode = createCodeRunner(c
     async close() {
       // io.close() disconnects every socket and closes the underlying HTTP server; rooms are
       // saved after that so no edit can arrive between the final flush and closing the database.
-      await new Promise((resolve) => io.close(() => resolve()));
+      const closed = new Promise((resolve) => io.close(() => resolve()));
+      httpServer.closeIdleConnections();
+      await closed;
       roomService.close();
       db.close();
     },
