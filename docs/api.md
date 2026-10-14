@@ -52,25 +52,40 @@ Connect with the WebSocket transport. Connections from browser origins not allow
 A socket is in at most one room at a time and may only act on the room it joined. Events
 naming another room are ignored.
 
-Positions use Monaco's convention: 1-based line and column numbers.
+The shared document is a [Yjs](https://docs.yjs.dev) document with one `Y.Text` named
+`content`. Document and cursor changes travel as binary
+[y-protocols](https://github.com/yjs/y-protocols) messages inside two events, `yjs-sync` and
+`yjs-awareness`. Both payloads are `{ roomId, data }`, where `data` is a `Uint8Array` of at
+most 1,000,000 bytes. Edits from different people merge automatically, including edits made
+while offline, so there are no version numbers, acknowledgements or resyncs to handle.
 
 ```ts
-type Range = { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number };
-type Delta = { range: Range; text: string };            // replace `range` with `text`; text ≤ 25,000 chars
-type Participant = { socketId: string; name: string; color: 'violet' | 'cyan' | 'amber' | 'rose' | 'lime' | 'sky'; cursor: Range | null };
-type Snapshot = { content: string; version: number; language: string; participants: Participant[] };
+type Participant = { socketId: string; name: string; color: 'violet' | 'cyan' | 'amber' | 'rose' | 'lime' | 'sky' };
+type Snapshot = { version: number; language: string; participants: Participant[] }; // version counts applied updates
 ```
+
+### Joining and syncing
+
+1. The client sends `join-room` and receives `room-sync`.
+2. The server sends `yjs-sync` with sync step 1 (its state vector). The client answers with
+   step 2: every change the server is missing (offline edits, or edits the server lost in
+   a crash).
+3. The client sends `yjs-sync` with its own step 1. The server answers with step 2 (the
+   document) and a `yjs-awareness` message with everyone's cursors.
+4. From then on both sides send `yjs-sync` update messages as edits happen. The server
+   relays each accepted update and awareness change to the rest of the room.
+
+After a reconnect the client repeats all four steps with the document it already has.
 
 ### Client → server
 
 | Event | Payload | Server reply |
 | --- | --- | --- |
-| `join-room` | `{ roomId, name }`: `roomId` is 1–64 letters, digits, `.`, `_`, `-` and starts with a letter or digit. `name` is 1–32 characters with no control or bidi-override characters. | `room-sync` to the sender, `participant-joined` to the others, or `room-error` |
-| `leave-room` | none | `participant-left` to the others |
-| `code-change` | `{ roomId, version, delta: Delta }`. `version` must equal the server's current version. | `change-accepted` to the sender and `remote-change` to the others. On a stale version: `force-resync`. On an invalid delta or a document over 100,000 characters: `document-error` + `force-resync`. |
-| `request-resync` | `{ roomId }` | `force-resync` |
+| `join-room` | `{ roomId, name }`: `roomId` is 1–64 letters, digits, `.`, `_`, `-` and starts with a letter or digit. `name` is 1–32 characters with no control or bidi-override characters. | `room-sync` and `yjs-sync` (step 1) to the sender, `participant-joined` to the others, or `room-error` |
+| `leave-room` | none | `participant-left` and an awareness removal to the others |
+| `yjs-sync` | `{ roomId, data }`: sync step 1, step 2 or update | Step 1: `yjs-sync` (step 2) and `yjs-awareness`. Step 2 or update: relayed to the others. If the change would make the text longer than 100,000 characters, contains a carriage return, or is malformed or too large: `document-error` with `reset: true`. |
+| `yjs-awareness` | `{ roomId, data }`: an awareness update for the sender's own client id | Relayed to the others. The server keeps only `cursor` (Yjs relative positions `{ anchor, head }`) and `typing`, and sets `user` to the server's record `{ socketId, name, color }`. Updates for client ids first used by another socket are ignored. |
 | `language-change` | `{ roomId, language }`: one of `javascript`, `typescript`, `java`, `cpp`, `python`, `json`, `css`, `html`, `markdown` | `language-changed` to the others |
-| `cursor-update` | `{ roomId, position: Range }`, with start before end | `remote-cursor` to the others |
 
 ### Server → client
 
@@ -80,21 +95,29 @@ type Snapshot = { content: string; version: number; language: string; participan
 | `room-error` | `{ message }` | Invalid join payload, or the room already has `MAX_PARTICIPANTS_PER_ROOM` people |
 | `participant-joined` | `Participant` | Someone else joined your room |
 | `participant-left` | `{ socketId }` | Someone left or disconnected |
-| `change-accepted` | `{ version }` | Your `code-change` was applied. Send your next one only after this arrives. |
-| `remote-change` | `{ delta: Delta, version }` | Someone else's edit was applied. Apply it if `version` is your version + 1; otherwise request a resync. |
-| `force-resync` | `Snapshot` | Replace your document with this one |
-| `document-error` | `{ message }` | Your edit could not be applied |
+| `yjs-sync` | `{ roomId, data }` | Sync handshake messages and other people's updates |
+| `yjs-awareness` | `{ roomId, data }` | Other people's cursors and typing state changed |
+| `document-error` | `{ message, reset: true }` | Your change was refused. It is already applied in your editor and Yjs changes cannot be taken back, so discard your local document and sync a fresh one. |
 | `language-changed` | `{ language }` | Someone changed the room's language |
-| `remote-cursor` | `{ socketId, position: Range, name, color }` | Someone moved their cursor or selection |
-| `server-error` | `{ message }` | A handler failed unexpectedly, or you are sending events too quickly |
+| `server-error` | `{ message }` | A handler failed unexpectedly, or you are sending events too quickly. If a document update was dropped, the server restarts the sync handshake once the rate-limit window resets. |
+
+Each connection may send 200 events and 4 MB of Yjs data per 5 seconds.
+
+### Line endings
+
+The shared text only ever contains `\n` line breaks, never `\r`. Editors that count a
+line break as one character (Monaco with its end-of-line set to LF) then use the same
+offsets as `Y.Text`. The server refuses updates that would add `\r`, and converts
+`\r\n` in rooms saved before this rule.
 
 ## Persistence and room lifecycle
 
-- Room content, language and version are stored in SQLite (`DATABASE_PATH`, default
-  `server/data/collabcode.db`). Participants and cursors are never stored.
+- Each room's Yjs document (`ydoc`), a plain-text copy (`content`) and its language are
+  stored in SQLite (`DATABASE_PATH`, default `server/data/collabcode.db`). Participants
+  and cursors are never stored. Rooms saved before Yjs are converted on first open.
 - Changes are saved in batches every 2 seconds, immediately when the last person leaves,
-  and during graceful shutdown. A crash can lose up to about 2 seconds of edits. A
-  reconnecting client whose version is newer than the server's restores its own copy.
+  and during graceful shutdown. A crash can lose up to about 2 seconds of edits; the sync
+  handshake gets them back from any client that still has them.
 - Rooms that were opened but never edited are not stored.
 - An empty room is removed from memory after `EMPTY_ROOM_TTL_MINUTES` (default 30) and
   reloaded from the database on the next join.
@@ -104,15 +127,17 @@ type Snapshot = { content: string; version: number; language: string; participan
 
 ## Running more than one server instance
 
-The current design assumes a single instance: live room state is in that process's memory,
-and SQLite is a local file. Running several instances behind a load balancer needs:
+The current design assumes a single instance: each open room's Yjs document lives in that
+process's memory, and SQLite is a local file. Running several instances behind a load
+balancer needs:
 
 1. **Sticky sessions**, or WebSocket-only clients (already the default), so a client's
    connection stays on one instance.
 2. **A shared Socket.io adapter** such as `@socket.io/redis-adapter`, so broadcasts reach
    clients connected to other instances.
-3. **One authority per room.** Today's versioned-delta protocol needs a single
-   in-memory copy of each document. Either route every room to one instance (for example
-   by hashing the room id), or move to a CRDT such as Yjs (planned), whose updates can be
-   merged on any instance.
+3. **Shared document updates.** Yjs updates merge in any order, so each instance can keep
+   its own copy of a room as long as every update also reaches the other instances' copies,
+   for example by publishing updates over Redis (as `y-redis` does). Broadcasting through
+   the adapter alone is not enough, because the server-side document on other instances
+   would fall behind.
 4. **A shared database** (for example Postgres) in place of the local SQLite file.

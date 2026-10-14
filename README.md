@@ -47,9 +47,14 @@ All server settings are validated at start-up; see `server/.env.example` for eve
 
 ## Collaboration model
 
-The server holds the authoritative document and monotonically increasing version. The client batches its unsent edits into one minimal prefix/suffix delta and waits for an acknowledgement before sending the next one. If a concurrent remote edit makes that delta unsafe to apply, the client requests a snapshot resync rather than risking corruption.
+Each room is a [Yjs](https://docs.yjs.dev) document, a CRDT, so simultaneous edits from everyone merge automatically and every editor ends up with the same text. Yjs messages travel over the app's existing Socket.io connection (`client/src/collab/SocketYjsProvider.js`, `server/src/socket/yjsHandlers.js`).
 
-This is deliberately a small, teachable versioned-delta implementation. For production-grade simultaneous editing, replace this layer with a CRDT such as Yjs.
+- **Offline edits** stay in the browser's copy of the document and merge when the connection comes back.
+- **Server restarts** are covered by SQLite. If the server ever loses recent edits, reconnecting clients send them back during the sync handshake.
+- **Cursors and selections** use Yjs awareness. Names and colors are set by the server, so a client cannot pose as someone else.
+- **Ctrl+Z / Ctrl+Y** undo and redo only your own changes, never a collaborator's.
+
+Monaco is bound to the shared text by `client/src/collab/monacoBinding.js`, a small equivalent of `y-monaco`. The app loads Monaco through `@monaco-editor/react`, and `y-monaco` would bundle a second copy.
 
 ## Server layout
 
@@ -63,15 +68,15 @@ server/src/
   controllers/    HTTP request handlers
   middleware/     error handler, rate limiting, body validation
   socket/         Socket.io event handlers and event rate limiting
-  services/       room service (live state + persistence), code runner
+  services/       room service (Yjs documents, awareness, persistence), code runner
   models/         SQL for each table
   db/             SQLite connection and migrations
   validation/     zod schemas for every HTTP body and socket payload
-  utils/          logger, errors, text deltas, colors
+  utils/          logger, errors, rate limiter, colors
 ```
 
 [docs/api.md](docs/api.md) documents the HTTP API, socket events, persistence rules, and what running more than one server instance would take.
 
 ## Production notes
 
-Rooms are public to anyone who knows their ID. Room content is stored in SQLite and survives restarts; a crash can lose up to about 2 seconds of edits, which reconnecting clients restore from their editors. Set `NODE_ENV=production`, list your client origins in `CLIENT_ORIGIN`, set `TRUST_PROXY` behind a reverse proxy, and serve over HTTPS. Running more than one server instance needs extra work; see [docs/api.md](docs/api.md#running-more-than-one-server-instance).
+Rooms are public to anyone who knows their ID. Room content is stored in SQLite and survives restarts; a crash can lose up to about 2 seconds of edits, which reconnecting clients send back automatically. Set `NODE_ENV=production`, list your client origins in `CLIENT_ORIGIN`, set `TRUST_PROXY` behind a reverse proxy, and serve over HTTPS. Running more than one server instance needs extra work; see [docs/api.md](docs/api.md#running-more-than-one-server-instance).
