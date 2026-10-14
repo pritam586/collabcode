@@ -118,6 +118,18 @@ export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCurs
     const baseContent = authoritativeContentRef.current;
     const hasUnsyncedChanges = pendingDeltaRef.current || localContent !== baseContent;
 
+    if (versionRef.current > 0 && room.version === 0 && room.content === '' && localContent !== '') {
+      // The server lost this room (restart or expiry). Offer our copy back as the first edit;
+      // if another participant restores theirs first, the version check resyncs us onto it.
+      authoritativeContentRef.current = '';
+      versionRef.current = 0;
+      pendingDeltaRef.current = null;
+      onVersionChange(0);
+      onNotice('The server restarted, so your copy of the code was restored to the room.');
+      scheduleFlush();
+      return undefined;
+    }
+
     if (hasUnsyncedChanges && localContent === room.content) {
       authoritativeContentRef.current = room.content;
       versionRef.current = room.version;

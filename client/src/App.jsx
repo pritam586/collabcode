@@ -20,6 +20,11 @@ export default function App() {
   const [runRequest, setRunRequest] = useState(0);
   const [isOutputOpen, setIsOutputOpen] = useState(false);
   const requestedRoomRef = useRef(null);
+  const roomRef = useRef(null);
+
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
 
   useEffect(() => {
     function joinRequestedRoom() {
@@ -36,12 +41,19 @@ export default function App() {
     }
 
     function handleRoomSync(snapshot) {
+      const previous = roomRef.current;
+      // Rejoining a room we had edited and finding it brand new means the server lost it;
+      // keep our language so EditorPane can restore the code under the right mode.
+      const serverLostRoom = previous?.id === snapshot.roomId && previous.version > 0 && snapshot.version === 0 && snapshot.content === '';
+      const language = serverLostRoom ? previous.language : snapshot.language;
+      if (serverLostRoom && language !== snapshot.language) socket.emit('language-change', { roomId: snapshot.roomId, language });
+
       setRoom((current) => ({
         id: snapshot.roomId,
         name: requestedRoomRef.current?.name || current?.name || savedName,
         content: snapshot.content,
         version: snapshot.version,
-        language: snapshot.language,
+        language,
       }));
       setParticipants(snapshot.participants);
       setRemoteCursors({});
