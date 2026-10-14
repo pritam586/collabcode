@@ -22,7 +22,7 @@ export function RoomJoinModal({ defaultName, onJoin, connectionState, errorMessa
           <input id="display-name" value={name} maxLength="32" onChange={(event) => setName(event.target.value)} placeholder="Ada Lovelace" required />
 
           <label htmlFor="room-id">Room name</label>
-          <input id="room-id" value={roomId} maxLength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" onChange={(event) => setRoomId(event.target.value)} placeholder="frontend-review" required />
+          <input id="room-id" value={roomId} maxLength="64" pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" onChange={(event) => setRoomId(event.target.value)} placeholder="frontend-review" required />
 
           {errorMessage && <p className="form-error" role="alert">{errorMessage}</p>}
 
