@@ -98,3 +98,25 @@ test('POST /api/run is limited to 10 requests per minute per address', async () 
     await server.close();
   }
 });
+
+test('POST /api/run validates the body before calling the runner', async () => {
+  let calls = 0;
+  const server = await startTestServer({ runCode: async () => { calls += 1; return { stdout: '', stderr: '', exitCode: 0 }; } });
+  try {
+    const send = (body) => fetch(`${server.url}/api/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    const badLanguage = await send({ language: 'ruby', code: 'puts 1' });
+    assert.equal(badLanguage.status, 400);
+    assert.match((await badLanguage.json()).error, /Only Java, TypeScript, Python, and C\+\+/);
+
+    const emptyCode = await send({ language: 'python', code: '' });
+    assert.equal(emptyCode.status, 400);
+    assert.match((await emptyCode.json()).error, /Code must be between 1 and 25000 characters/);
+
+    const missingCode = await send({ language: 'python' });
+    assert.equal(missingCode.status, 400);
+    assert.equal(calls, 0);
+  } finally {
+    await server.close();
+  }
+});
