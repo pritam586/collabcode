@@ -5,11 +5,16 @@ import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { registerSocketHandlers } from './socket/index.js';
 import { registerRunRoute } from './routes/runRoute.js';
+import { loadConfig } from './config/env.js';
 import { createOriginMatcher } from './config/origins.js';
+import { createCodeRunner } from './services/codeRunner.js';
+import { createLogger } from './utils/logger.js';
 
+const config = loadConfig();
+const logger = createLogger(config.log);
 const app = express();
 const httpServer = createServer(app);
-const isAllowedOrigin = createOriginMatcher({ clientOrigin: process.env.CLIENT_ORIGIN, nodeEnv: process.env.NODE_ENV });
+const isAllowedOrigin = createOriginMatcher({ clientOrigin: config.clientOrigin, nodeEnv: config.env });
 // Requests without an Origin header (curl, health checks) are not browser cross-origin requests.
 const corsOrigin = (origin, callback) => callback(null, !origin || isAllowedOrigin(origin));
 
@@ -26,7 +31,7 @@ app.use(express.json({ limit: '110kb' }));
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' });
 });
-registerRunRoute(app);
+registerRunRoute(app, createCodeRunner(config.runner));
 
 const io = new Server(httpServer, {
   maxHttpBufferSize: 110_000,
@@ -43,10 +48,6 @@ const io = new Server(httpServer, {
 
 registerSocketHandlers(io);
 
-const port = Number(process.env.PORT || 4000);
-if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-  throw new Error('PORT must be an integer between 1 and 65535.');
-}
-httpServer.listen(port, () => {
-  console.log(`CollabCode server listening on http://localhost:${port}`);
+httpServer.listen(config.port, () => {
+  logger.info({ port: config.port, env: config.env }, `CollabCode server listening on http://localhost:${config.port}`);
 });

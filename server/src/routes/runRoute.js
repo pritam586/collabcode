@@ -1,9 +1,9 @@
-import { CodeRunnerError, runCompiledCode } from '../services/codeRunner.js';
+import { CodeRunnerError } from '../services/codeRunner.js';
 import { createRateLimiter } from '../utils/rateLimiter.js';
 
 const runLimiter = createRateLimiter({ windowMs: 60_000, maxRequests: 10 });
 
-export function registerRunRoute(app) {
+export function registerRunRoute(app, runCompiledCode) {
   app.post('/api/run', async (request, response) => {
     const address = request.ip || request.socket.remoteAddress || 'unknown';
     if (!runLimiter.allow(address)) {
