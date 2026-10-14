@@ -6,7 +6,7 @@ import { runCompiledCode } from '../utils/codeRunner.js';
 
 const validColors = new Set(['violet', 'cyan', 'amber', 'rose', 'lime', 'sky']);
 
-export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCursors, onVersionChange, onLanguageResync, onRecoveryDraft, onOutputVisibilityChange, onNotice }) {
+export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCursors, onVersionChange, onLanguageResync, onRecoveryDraft, onOutputVisibilityChange, onNotice, onRunShortcut }) {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const authoritativeContentRef = useRef(room.content);
@@ -231,6 +231,9 @@ export function EditorPane({ room, syncKey, runRequest, isOutputOpen, remoteCurs
 
     const model = instance.getModel();
     if (model) monaco.editor.setModelLanguage(model, room.language);
+
+    // Replaces Monaco's default Ctrl+Enter ("insert line below") inside the editor.
+    instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => onRunShortcut());
 
     const changeSubscription = instance.onDidChangeModelContent(() => {
       if (!isRemoteChangeRef.current) scheduleFlush();

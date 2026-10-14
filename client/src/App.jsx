@@ -27,6 +27,18 @@ export default function App() {
   }, [room]);
 
   useEffect(() => {
+    if (!room) return undefined;
+    // Ctrl/Cmd+Enter runs code from anywhere in the workspace; Monaco handles it itself when focused.
+    function handleKeyDown(event) {
+      if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.defaultPrevented) return;
+      event.preventDefault();
+      setRunRequest((value) => value + 1);
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [room]);
+
+  useEffect(() => {
     function joinRequestedRoom() {
       if (requestedRoomRef.current) socket.emit('join-room', requestedRoomRef.current);
     }
@@ -158,7 +170,7 @@ export default function App() {
         <div className="header-actions">
           <span className="version-label">v{room.version}</span>
           <LanguageSelector language={room.language} onChange={changeLanguage} />
-          <button className="run-button" type="button" onClick={() => setRunRequest((value) => value + 1)}>
+          <button className="run-button" type="button" title="Run code (Ctrl+Enter)" aria-keyshortcuts="Control+Enter Meta+Enter" onClick={() => setRunRequest((value) => value + 1)}>
             <span aria-hidden="true">&#9654;</span> Run code
           </button>
           <button className={`output-toggle ${isOutputOpen ? 'active' : ''}`} type="button" aria-pressed={isOutputOpen} onClick={() => setIsOutputOpen((isOpen) => !isOpen)}>
@@ -192,6 +204,7 @@ export default function App() {
             onRecoveryDraft={(draft) => setRecoveryDraft((current) => current || draft)}
             onOutputVisibilityChange={setIsOutputOpen}
             onNotice={setNotice}
+            onRunShortcut={() => setRunRequest((value) => value + 1)}
           />
           <footer className="editor-status"><span><i className={`status-dot ${connectionState}`} /> {connectionState === 'connected' ? 'Synced' : 'Offline changes protected'}</span><span>UTF-8</span><span>Spaces: 2</span><span>{room.language}</span></footer>
         </div>
