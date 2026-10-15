@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { readStorage, writeStorage } from '../lib/storage.js';
 
 const THEME_KEY = 'collabcode-theme';
@@ -28,12 +29,17 @@ export function useTheme() {
     document.documentElement.dataset.theme = theme;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', theme === 'dark' ? '#0d1018' : '#f5f6fa');
+      ?.setAttribute('content', theme === 'dark' ? '#080b14' : '#f6f7fb');
   }, [theme]);
 
+  // Where supported, the switch cross-fades the page. flushSync renders the new theme inside
+  // the transition callback so the browser captures the finished frame.
   const setPreference = useCallback((next) => {
-    setPreferenceState(next);
     writeStorage(THEME_KEY, next);
+    const update = () => flushSync(() => setPreferenceState(next));
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (document.startViewTransition && !reduceMotion) document.startViewTransition(update);
+    else update();
   }, []);
 
   return { preference, theme, setPreference };

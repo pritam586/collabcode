@@ -1,3 +1,13 @@
+/* Arial resized to Inter's metrics, so the swap to the web font does not shift the layout. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  ascent-override: 90.49%;
+  descent-override: 22.56%;
+  line-gap-override: 0%;
+  size-adjust: 107.06%;
+}
+
 *,
 *::before,
 *::after {
@@ -11,10 +21,18 @@ body,
   min-height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss03';
+  font-optical-sizing: auto;
   font-size: var(--text-base);
   font-synthesis: none;
   line-height: var(--leading-normal);
@@ -22,6 +40,7 @@ body {
   min-height: 100dvh;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button,
@@ -30,10 +49,12 @@ select,
 textarea {
   color: inherit;
   font: inherit;
+  font-feature-settings: inherit;
 }
 
 button {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button:disabled {
@@ -47,13 +68,45 @@ button:disabled {
 
 a {
   color: var(--color-accent-text);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 h1,
 h2,
 h3,
+h4,
 p {
   margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-feature-settings: normal;
+}
+
+::selection {
+  background: var(--color-selection);
+}
+
+/* Thin scrollbars that match the theme (Monaco draws its own). */
+* {
+  scrollbar-width: thin;
 }
 
 /* One consistent, clearly visible focus ring for keyboard users. */
@@ -77,9 +130,9 @@ p {
 }
 
 .skip-link {
-  background: var(--color-accent);
+  background: var(--gradient-brand-strong);
   border-radius: var(--radius-sm);
-  color: var(--color-on-accent);
+  color: var(--color-on-brand);
   font-weight: var(--weight-semibold);
   left: var(--space-3);
   padding: var(--space-2) var(--space-4);
@@ -87,11 +140,46 @@ p {
   text-decoration: none;
   top: var(--space-3);
   transform: translateY(-200%);
-  z-index: var(--z-toast);
+  z-index: var(--z-tooltip);
 }
 
 .skip-link:focus {
   transform: none;
+}
+
+/* Gradient text for short headline accents. The solid color is the fallback. */
+.text-gradient {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: var(--color-accent-text);
+  -webkit-text-fill-color: transparent;
+}
+
+/* Background textures: a dot grid that fades out toward the edges, and fine film grain.
+   Both are purely decorative layers placed with position: absolute inside their section. */
+.texture-dots {
+  background-image: radial-gradient(var(--texture-dot) 1px, transparent 1px);
+  background-size: 24px 24px;
+  inset: 0;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+  pointer-events: none;
+  position: absolute;
+}
+
+.texture-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  inset: 0;
+  opacity: var(--texture-grain-opacity);
+  pointer-events: none;
+  position: absolute;
+}
+
+/* Switching themes cross-fades the whole page (see useTheme). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,11 +3,14 @@
 // Exits with code 1 if any pair fails. Run with: npm run check:contrast
 import { readFileSync } from 'node:fs';
 
-const css = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8');
+// Quote style in selectors does not matter: compare with double quotes made single.
+const css = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8').replaceAll('"', "'");
 
+// Reads the hex color tokens in one top-level block. A missing block is an error, not a pass.
 function readBlock(selector) {
-  const start = css.indexOf(`${selector} {`);
-  const end = css.indexOf('}', start);
+  const start = css.indexOf(`\n${selector} {`);
+  if (start === -1) throw new Error(`tokens.css has no "${selector}" block.`);
+  const end = css.indexOf('\n}', start);
   const tokens = {};
   for (const [, name, value] of css.slice(start, end).matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})\b/gi))
     tokens[name] = value;
@@ -15,7 +18,7 @@ function readBlock(selector) {
 }
 
 const dark = readBlock(':root');
-const themes = { dark, light: { ...dark, ...readBlock(':root[data-theme="light"]') } };
+const themes = { dark, light: { ...dark, ...readBlock(":root[data-theme='light']") } };
 
 const TEXT = 4.5;
 const UI = 3;
@@ -24,6 +27,14 @@ const pairs = [
     ['color-text', background, TEXT],
     ['color-text-muted', background, TEXT],
   ]),
+  ...['bg', 'surface', 'surface-raised', 'surface-sunken'].map((background) => ['color-text-subtle', background, TEXT]),
+  // Primary buttons: white text over every stop of the strong gradient.
+  ['color-on-brand', 'brand-violet-strong', TEXT],
+  ['color-on-brand', 'brand-blue-strong', TEXT],
+  ['color-on-brand', 'brand-cyan-strong', TEXT],
+  // Tooltips invert the page colors.
+  ['color-bg', 'color-text', TEXT],
+  ['color-info', 'color-surface', TEXT],
   ['color-accent-text', 'color-bg', TEXT],
   ['color-accent-text', 'color-surface', TEXT],
   ['color-accent-text', 'color-surface-raised', TEXT],
@@ -46,7 +57,7 @@ const pairs = [
   ]),
 ].map(([foreground, background, minimum]) => [
   foreground,
-  background.startsWith('color-') || background.startsWith('presence-') ? background : `color-${background}`,
+  /^(color|presence|brand)-/.test(background) ? background : `color-${background}`,
   minimum,
 ]);
 
