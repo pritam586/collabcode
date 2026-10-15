@@ -3,11 +3,16 @@ import Editor from '@monaco-editor/react';
 import '../editor/monacoSetup.js';
 import { bindMonacoToYText } from '../collab/monacoBinding.js';
 import { bindRemoteCursors } from '../collab/remoteCursors.js';
+import { EditorKeyBar } from './EditorKeyBar.jsx';
 import { MOD_KEY } from './ui/Kbd.jsx';
+import { TOUCH_QUERY, useMediaQuery } from '../hooks/useMediaQuery.js';
 import { runCompiledCode } from '../utils/codeRunner.js';
 
 // Binds Monaco to the room's shared Yjs document (the provider is owned by App) and runs code.
-export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputVisibilityChange, onRunShortcut, theme = 'dark', fontSize = 14 }) {
+// view: 'split' shows the editor with an optional output panel below (isOutputOpen); on
+// phones 'code' and 'output' show one of them full height. The editor stays mounted either way.
+export function EditorPane({ room, provider, runRequest, view = 'split', isOutputOpen, onOutputVisibilityChange, onRunShortcut, theme = 'dark', fontSize = 14 }) {
+  const isTouch = useMediaQuery(TOUCH_QUERY);
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const runnerFrameRef = useRef(null);
@@ -104,7 +109,10 @@ export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputV
 
   useEffect(() => {
     if (editor) editor.layout();
-  }, [editor, isOutputOpen, outputHeight]);
+  }, [editor, isOutputOpen, outputHeight, view]);
+
+  const showEditor = view !== 'output';
+  const showOutput = view === 'output' || (view === 'split' && isOutputOpen);
 
   useEffect(() => () => resizeCleanupRef.current?.(), []);
 
@@ -145,8 +153,8 @@ export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputV
   }
 
   return (
-    <div className="editor-pane" ref={paneRef}>
-      <div className="editor-surface" aria-busy={!isSynced}>
+    <div className={`editor-pane view-${view}`} ref={paneRef}>
+      <div className="editor-surface" aria-busy={!isSynced} hidden={!showEditor}>
         {!isSynced && (
           <div className="editor-loading" role="status">
             <div className="editor-loading-lines" aria-hidden="true">
@@ -168,20 +176,28 @@ export function EditorPane({ room, provider, runRequest, isOutputOpen, onOutputV
             fontSize,
             lineHeight: Math.round(fontSize * 1.7),
             minimap: { enabled: false },
-            padding: { top: 18, bottom: 18 },
+            padding: { top: isTouch ? 12 : 18, bottom: 18 },
             scrollBeyondLastLine: false,
             smoothScrolling: true,
             cursorSmoothCaretAnimation: 'on',
             renderLineHighlight: 'all',
             tabSize: 2,
+            // Touch screens: wrap long lines instead of scrolling sideways, drop the margins that
+            // waste width, and use scrollbars large enough to grab with a finger.
+            wordWrap: isTouch ? 'on' : 'off',
+            folding: !isTouch,
+            glyphMargin: false,
+            lineNumbersMinChars: isTouch ? 2 : 4,
+            scrollbar: { verticalScrollbarSize: isTouch ? 14 : 12, horizontalScrollbarSize: isTouch ? 14 : 12, alwaysConsumeMouseWheel: false },
             // Typing before the shared code arrives would merge with it in surprising ways.
             readOnly: !isSynced,
           }}
         />
       </div>
-      {isOutputOpen && (
-        <section className="run-output" style={{ flexBasis: `${outputHeight}px` }} aria-live="polite" aria-label="Code output">
-          <div className="output-resizer" role="separator" aria-label="Resize output panel" aria-orientation="horizontal" onPointerDown={startOutputResize} />
+      {isTouch && showEditor && editor && isSynced && <EditorKeyBar editor={editor} />}
+      {showOutput && (
+        <section className="run-output" style={view === 'split' ? { flexBasis: `${outputHeight}px` } : undefined} aria-live="polite" aria-label="Code output">
+          {view === 'split' && <div className="output-resizer" role="separator" aria-label="Resize output panel" aria-orientation="horizontal" onPointerDown={startOutputResize} />}
           <div className="run-output-heading">
             <h2>Output</h2>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRunOutput([])} disabled={runOutput.length === 0}>Clear</button>

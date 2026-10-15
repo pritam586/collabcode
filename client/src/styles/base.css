@@ -40,6 +40,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Components set `display`, which would otherwise override the hidden attribute. */
+[hidden] {
+  display: none !important;
+}
+
 a {
   color: var(--color-accent-text);
 }

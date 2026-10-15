@@ -4,7 +4,9 @@ import { readStorage, writeStorage } from '../lib/storage.js';
 const THEME_KEY = 'collabcode-theme';
 const FONT_SIZE_KEY = 'collabcode-font-size';
 const NAME_KEY = 'collabcode-name';
-export const FONT_SIZES = { min: 12, max: 22, default: 14 };
+// Touch screens default to 16px: iOS zooms the page when focusing text smaller than that.
+const touch = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+export const FONT_SIZES = { min: 12, max: 22, default: touch ? 16 : 14 };
 const systemDark = () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
 
 // preference: 'system' | 'light' | 'dark'. The resolved theme is written to

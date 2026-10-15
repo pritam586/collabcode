@@ -1,46 +1,17 @@
-import { ListChecks, MessageSquare, Users, X } from 'lucide-react';
-import { ChatPanel } from './ChatPanel.jsx';
-import { ParticipantsPanel } from './ParticipantsPanel.jsx';
-import { TasksPanel } from './TasksPanel.jsx';
+import { X } from 'lucide-react';
 import { IconButton } from './ui/Button.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 
-export function Sidebar({
-  selectedTab, onSelectTab, onClose, participants, selfSocketId, typingSocketIds, messages, pendingMessages,
-  onSendMessage, onDiscardMessage, unreadCount, taskList, name, onInvite,
-}) {
-  const openTasks = taskList.tasks.filter((task) => !task.done).length;
-  // The visible number is hidden from screen readers in favour of a full phrase in the tab name.
-  const countBadge = (count, label, accent = false) => (count > 0 ? (
-    <>
-      <span className={`badge ${accent ? 'badge-accent' : ''}`} aria-hidden="true">{count}</span>
-      <span className="sr-only">, {label}</span>
-    </>
-  ) : null);
-
-  const tabs = [
-    {
-      id: 'people',
-      label: 'People',
-      icon: <Users size={16} aria-hidden="true" />,
-      badge: countBadge(participants.length, `${participants.length} in the room`),
-      content: <ParticipantsPanel participants={participants} selfSocketId={selfSocketId} typingSocketIds={typingSocketIds} onInvite={onInvite} />,
-    },
-    {
-      id: 'chat',
-      label: 'Chat',
-      icon: <MessageSquare size={16} aria-hidden="true" />,
-      badge: countBadge(unreadCount, `${unreadCount} unread`, true),
-      content: <ChatPanel messages={messages} pendingMessages={pendingMessages} selfSocketId={selfSocketId} onSend={onSendMessage} onDiscard={onDiscardMessage} isVisible={selectedTab === 'chat'} />,
-    },
-    {
-      id: 'tasks',
-      label: 'Tasks',
-      icon: <ListChecks size={16} aria-hidden="true" />,
-      badge: countBadge(openTasks, `${openTasks} open`),
-      content: <TasksPanel taskList={taskList} name={name} />,
-    },
-  ];
+// Desktop and tablet sidebar. `sections` comes from Workspace (useRoomSections), which also
+// feeds the phone layout's bottom tabs, so both show the same panels and badges.
+export function Sidebar({ sections, selectedTab, onSelectTab, onClose }) {
+  const tabs = sections.map(({ id, label, icon: Icon, badge, content }) => ({
+    id,
+    label,
+    icon: <Icon size={16} aria-hidden="true" />,
+    badge: <CountBadge {...badge} />,
+    content,
+  }));
 
   return (
     <aside className="sidebar" id="workspace-sidebar" aria-label="People, chat and tasks">
@@ -49,5 +20,16 @@ export function Sidebar({
       </div>
       <Tabs label="Sidebar" tabs={tabs} selectedId={selectedTab} onSelect={onSelectTab} />
     </aside>
+  );
+}
+
+// The visible number is hidden from screen readers in favour of a full phrase in the tab name.
+export function CountBadge({ count = 0, label = '', accent = false }) {
+  if (count <= 0) return null;
+  return (
+    <>
+      <span className={`badge ${accent ? 'badge-accent' : ''}`} aria-hidden="true">{count}</span>
+      <span className="sr-only">, {label}</span>
+    </>
   );
 }
