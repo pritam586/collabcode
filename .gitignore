@@ -3,3 +3,6 @@ dist
 .env
 server/tmpcpp/
 server/data/
+playwright-report/
+test-results/
+coverage/

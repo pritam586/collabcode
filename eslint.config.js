@@ -53,10 +53,15 @@ export default [
     },
   },
   {
-    files: ['client/scripts/**/*.mjs', 'client/vite.config.js', 'playwright.config.js', 'e2e/**/*.js'],
+    files: ['client/scripts/**/*.mjs', 'client/*.config.js', 'playwright.config.js'],
     languageOptions: { globals: globals.node },
     // Command-line scripts report to the terminal.
     rules: { 'no-console': 'off' },
+  },
+  {
+    // Playwright specs run in Node, but page.evaluate() callbacks run in the browser.
+    files: ['e2e/**/*.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
     files: ['client/**/*.test.{js,jsx}', 'client/src/test/**/*.js'],
