@@ -1,6 +1,7 @@
 import { sendSyncStep1 } from './yjsHandlers.js';
 
-export const RATE_LIMITED_MESSAGE = 'You are sending updates too quickly, so some were skipped. Your editor will catch up automatically.';
+export const RATE_LIMITED_MESSAGE =
+  'You are sending updates too quickly, so some were skipped. Your editor will catch up automatically.';
 
 // Caps how many events, and how many bytes of Yjs data, one socket may send per window. A
 // normal client sends a few dozen small events per second at most while typing and moving
@@ -41,10 +42,13 @@ export function limitEvents(socket, { roomService, logger, windowMs = 5000, maxE
 
     const roomId = socket.data.roomId;
     if (event !== 'yjs-sync' || payload?.roomId !== roomId || resyncTimer) return;
-    resyncTimer = setTimeout(() => {
-      resyncTimer = null;
-      const room = roomService.getRoom(roomId);
-      if (socket.connected && room && socket.data.roomId === roomId) sendSyncStep1(socket, room);
-    }, windowStartedAt + windowMs - now + 1);
+    resyncTimer = setTimeout(
+      () => {
+        resyncTimer = null;
+        const room = roomService.getRoom(roomId);
+        if (socket.connected && room && socket.data.roomId === roomId) sendSyncStep1(socket, room);
+      },
+      windowStartedAt + windowMs - now + 1,
+    );
   });
 }

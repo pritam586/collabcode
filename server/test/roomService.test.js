@@ -18,7 +18,13 @@ function setup(options = {}) {
     services.push(service);
     return service;
   };
-  return { clock, repository, service: create(), create, closeAll: () => services.forEach((service) => service.close()) };
+  return {
+    clock,
+    repository,
+    service: create(),
+    create,
+    closeAll: () => services.forEach((service) => service.close()),
+  };
 }
 
 // A Yjs update that inserts `text` at `index` on top of `room`'s current document.
@@ -104,7 +110,18 @@ test('restores the document, language and change count from the database after a
 
 test('converts rooms saved before Yjs from their plain-text content', (t) => {
   const repository = createRoomRepository(openDatabase(':memory:'));
-  repository.saveMany([{ id: 'legacy', content: 'print(1)', ydoc: null, language: 'python', docVersion: 7, createdAt: 1, updatedAt: 1, lastActiveAt: 1 }]);
+  repository.saveMany([
+    {
+      id: 'legacy',
+      content: 'print(1)',
+      ydoc: null,
+      language: 'python',
+      docVersion: 7,
+      createdAt: 1,
+      updatedAt: 1,
+      lastActiveAt: 1,
+    },
+  ]);
   const { service, closeAll } = setup({ repository });
   t.after(closeAll);
 
@@ -202,7 +219,10 @@ test('binds awareness states to the sender and removes them when the sender leav
   assert.equal(service.applyAwareness('room', 's1', adaUpdate), true);
 
   const state = room.awareness.getStates().get(adaAwareness.clientID);
-  assert.deepEqual(state, { typing: true, user: { socketId: 's1', name: 'Ada', color: room.participants.get('s1').color } });
+  assert.deepEqual(state, {
+    typing: true,
+    user: { socketId: 's1', name: 'Ada', color: room.participants.get('s1').color },
+  });
 
   assert.equal(service.applyAwareness('room', 's2', adaUpdate), false, "Grace cannot overwrite Ada's state");
   assert.equal(service.applyAwareness('room', 'outsider', adaUpdate), false);
@@ -217,8 +237,26 @@ test('keeps carriage returns out of the shared text so editor offsets always mat
   const legacyDoc = new Y.Doc();
   legacyDoc.getText('content').insert(0, 'a\r\nb\rc');
   repository.saveMany([
-    { id: 'legacy-text', content: 'one\r\ntwo', ydoc: null, language: 'python', docVersion: 1, createdAt: 1, updatedAt: 1, lastActiveAt: 1 },
-    { id: 'legacy-ydoc', content: '', ydoc: Y.encodeStateAsUpdate(legacyDoc), language: 'python', docVersion: 1, createdAt: 1, updatedAt: 1, lastActiveAt: 1 },
+    {
+      id: 'legacy-text',
+      content: 'one\r\ntwo',
+      ydoc: null,
+      language: 'python',
+      docVersion: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      lastActiveAt: 1,
+    },
+    {
+      id: 'legacy-ydoc',
+      content: '',
+      ydoc: Y.encodeStateAsUpdate(legacyDoc),
+      language: 'python',
+      docVersion: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      lastActiveAt: 1,
+    },
   ]);
   const { service, closeAll } = setup({ repository });
   t.after(closeAll);

@@ -4,7 +4,10 @@ const LOCAL_DEV_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\]):\d{1,5}$/;
 // accepted, so Vite falling back from 5173 to another port keeps working.
 export function createOriginMatcher({ clientOrigin = 'http://localhost:5173', nodeEnv } = {}) {
   const allowedOrigins = new Set(
-    clientOrigin.split(',').map((origin) => origin.trim().replace(/\/+$/, '')).filter(Boolean),
+    clientOrigin
+      .split(',')
+      .map((origin) => origin.trim().replace(/\/+$/, ''))
+      .filter(Boolean),
   );
   const allowLocalDev = nodeEnv !== 'production';
 

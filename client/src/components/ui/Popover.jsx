@@ -49,7 +49,14 @@ export function Popover({ label, icon, children, align = 'end', buttonProps = {}
       >
         {icon}
       </button>
-      <div ref={panelRef} id={panelId} className={`popover-panel popover-${align}`} hidden={!open} role="group" aria-label={label}>
+      <div
+        ref={panelRef}
+        id={panelId}
+        className={`popover-panel popover-${align}`}
+        hidden={!open}
+        role="group"
+        aria-label={label}
+      >
         {open && children({ close })}
       </div>
     </div>

@@ -46,7 +46,9 @@ export function bindMonacoToYText({ ytext, editor, monaco, onLocalChange }) {
         } else if (operation.delete !== undefined) {
           const start = model.getPositionAt(index);
           const end = model.getPositionAt(index + operation.delete);
-          model.applyEdits([{ range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column), text: '' }]);
+          model.applyEdits([
+            { range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column), text: '' },
+          ]);
         }
       }
     });

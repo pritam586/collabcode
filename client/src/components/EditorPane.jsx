@@ -11,7 +11,17 @@ import { runCompiledCode } from '../utils/codeRunner.js';
 // Binds Monaco to the room's shared Yjs document (the provider is owned by App) and runs code.
 // view: 'split' shows the editor with an optional output panel below (isOutputOpen); on
 // phones 'code' and 'output' show one of them full height. The editor stays mounted either way.
-export function EditorPane({ room, provider, runRequest, view = 'split', isOutputOpen, onOutputVisibilityChange, onRunShortcut, theme = 'dark', fontSize = 14 }) {
+export function EditorPane({
+  room,
+  provider,
+  runRequest,
+  view = 'split',
+  isOutputOpen,
+  onOutputVisibilityChange,
+  onRunShortcut,
+  theme = 'dark',
+  fontSize = 14,
+}) {
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
@@ -32,7 +42,8 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
   }, []);
 
   const runNativeCode = useCallback(async (language, code) => {
-    const languageLabel = language === 'cpp' ? 'C++' : language === 'python' ? 'Python' : language === 'typescript' ? 'TypeScript' : 'Java';
+    const languageLabel =
+      language === 'cpp' ? 'C++' : language === 'python' ? 'Python' : language === 'typescript' ? 'TypeScript' : 'Java';
     setRunOutput([{ type: 'muted', text: `Running ${languageLabel} in an isolated container...` }]);
     try {
       const result = await runCompiledCode(language, code);
@@ -54,13 +65,23 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
       return;
     }
 
-    if (room.language === 'java' || room.language === 'cpp' || room.language === 'python' || room.language === 'typescript') {
+    if (
+      room.language === 'java' ||
+      room.language === 'cpp' ||
+      room.language === 'python' ||
+      room.language === 'typescript'
+    ) {
       runNativeCode(room.language, code);
       return;
     }
 
     if (room.language !== 'javascript') {
-      setRunOutput([{ type: 'error', text: `Run Code supports JavaScript, TypeScript, Java, Python, and C++. ${room.language} is currently editor-only.` }]);
+      setRunOutput([
+        {
+          type: 'error',
+          text: `Run Code supports JavaScript, TypeScript, Java, Python, and C++. ${room.language} is currently editor-only.`,
+        },
+      ]);
       return;
     }
 
@@ -86,7 +107,6 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
     window.addEventListener('message', receiveRunnerMessage);
     return () => window.removeEventListener('message', receiveRunnerMessage);
   }, [appendRunOutput]);
-
 
   useEffect(() => {
     if (!editor || !monacoRef.current) return undefined;
@@ -155,9 +175,13 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
         {!isSynced && (
           <div className="editor-loading" role="status">
             <div className="editor-loading-lines" aria-hidden="true">
-              {[64, 42, 78, 30, 56].map((width, index) => <span key={index} className="skeleton skeleton-line" style={{ width: `${width}%` }} />)}
+              {[64, 42, 78, 30, 56].map((width, index) => (
+                <span key={index} className="skeleton skeleton-line" style={{ width: `${width}%` }} />
+              ))}
             </div>
-            <p><span className="spinner" aria-hidden="true" /> Loading the shared code…</p>
+            <p>
+              <span className="spinner" aria-hidden="true" /> Loading the shared code…
+            </p>
           </div>
         )}
         <Editor
@@ -185,7 +209,11 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
             folding: !isTouch,
             glyphMargin: false,
             lineNumbersMinChars: isTouch ? 2 : 4,
-            scrollbar: { verticalScrollbarSize: isTouch ? 14 : 12, horizontalScrollbarSize: isTouch ? 14 : 12, alwaysConsumeMouseWheel: false },
+            scrollbar: {
+              verticalScrollbarSize: isTouch ? 14 : 12,
+              horizontalScrollbarSize: isTouch ? 14 : 12,
+              alwaysConsumeMouseWheel: false,
+            },
             // Typing before the shared code arrives would merge with it in surprising ways.
             readOnly: !isSynced,
           }}
@@ -193,16 +221,58 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
       </div>
       {isTouch && showEditor && editor && isSynced && <EditorKeyBar editor={editor} />}
       {showOutput && (
-        <section className="run-output" style={view === 'split' ? { flexBasis: `${outputHeight}px` } : undefined} aria-live="polite" aria-label="Code output">
-          {view === 'split' && <div className="output-resizer" role="separator" aria-label="Resize output panel" aria-orientation="horizontal" onPointerDown={startOutputResize} />}
+        <section
+          className="run-output"
+          style={view === 'split' ? { flexBasis: `${outputHeight}px` } : undefined}
+          aria-live="polite"
+          aria-label="Code output"
+        >
+          {view === 'split' && (
+            <div
+              className="output-resizer"
+              role="separator"
+              aria-label="Resize output panel"
+              aria-orientation="horizontal"
+              onPointerDown={startOutputResize}
+            />
+          )}
           <div className="run-output-heading">
             <h2>Output</h2>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRunOutput([])} disabled={runOutput.length === 0}>Clear</button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setRunOutput([])}
+              disabled={runOutput.length === 0}
+            >
+              Clear
+            </button>
           </div>
-          <pre>{runOutput.length > 0 ? runOutput.map((line, index) => <code className={`output-${line.type}`} key={`${index}-${line.text}`}>{line.text}{'\n'}</code>) : <code className="output-muted">Press Run or {MOD_KEY}+Enter to run the code. Output and errors appear here.</code>}</pre>
+          <pre>
+            {runOutput.length > 0 ? (
+              runOutput.map((line, index) => (
+                <code className={`output-${line.type}`} key={`${index}-${line.text}`}>
+                  {line.text}
+                  {'\n'}
+                </code>
+              ))
+            ) : (
+              <code className="output-muted">
+                Press Run or {MOD_KEY}+Enter to run the code. Output and errors appear here.
+              </code>
+            )}
+          </pre>
         </section>
       )}
-      {runnerSource && <iframe key={runnerKey} ref={runnerFrameRef} className="runner-frame" sandbox="allow-scripts" srcDoc={runnerSource} title="JavaScript code runner" />}
+      {runnerSource && (
+        <iframe
+          key={runnerKey}
+          ref={runnerFrameRef}
+          className="runner-frame"
+          sandbox="allow-scripts"
+          srcDoc={runnerSource}
+          title="JavaScript code runner"
+        />
+      )}
     </div>
   );
 }

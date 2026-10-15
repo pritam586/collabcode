@@ -17,7 +17,9 @@ export function StatusBar({ status, typingNames, language, fontSize }) {
         {live ? <CircleCheck size={14} aria-hidden="true" /> : <CloudOff size={14} aria-hidden="true" />}
         {live ? 'All changes synced' : 'Offline. Changes are kept and will sync.'}
       </span>
-      <span className="status-typing" aria-live="polite">{describeTyping(typingNames)}</span>
+      <span className="status-typing" aria-live="polite">
+        {describeTyping(typingNames)}
+      </span>
       <span className="status-meta hide-tablet">{languageLabel}</span>
       <span className="status-meta hide-tablet">{fontSize}px</span>
     </footer>

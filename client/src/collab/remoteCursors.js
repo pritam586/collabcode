@@ -15,7 +15,8 @@ export function bindRemoteCursors({ provider, editor, monaco }) {
   let sendTimer = null;
   let typingTimer = null;
 
-  const toRelative = (position) => Y.relativePositionToJSON(Y.createRelativePositionFromTypeIndex(text, model.getOffsetAt(position)));
+  const toRelative = (position) =>
+    Y.relativePositionToJSON(Y.createRelativePositionFromTypeIndex(text, model.getOffsetAt(position)));
   const toPosition = (json) => {
     const absolute = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(json), doc);
     return absolute && absolute.type === text ? model.getPositionAt(absolute.index) : null;
@@ -43,7 +44,10 @@ export function bindRemoteCursors({ provider, editor, monaco }) {
       const [start, end] = monaco.Position.isBefore(anchor, head) ? [anchor, head] : [head, anchor];
       decorations.push({
         range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column),
-        options: { className: `remote-selection remote-selection-${color}`, hoverMessage: { value: `${state.user.name}'s selection` } },
+        options: {
+          className: `remote-selection remote-selection-${color}`,
+          hoverMessage: { value: `${state.user.name}'s selection` },
+        },
       });
       decorations.push({
         range: new monaco.Range(head.lineNumber, head.column, head.lineNumber, head.column),

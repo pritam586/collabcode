@@ -49,7 +49,15 @@ export function ChatPanel({ messages, pendingMessages, selfSocketId, onSend, onD
 
   return (
     <div className="panel chat-panel">
-      <div className="chat-log" ref={listRef} onScroll={handleScroll} role="log" aria-label="Chat messages" aria-live="polite" tabIndex={0}>
+      <div
+        className="chat-log"
+        ref={listRef}
+        onScroll={handleScroll}
+        role="log"
+        aria-label="Chat messages"
+        aria-live="polite"
+        tabIndex={0}
+      >
         {isEmpty && (
           <div className="empty-state">
             <MessageSquare size={28} aria-hidden="true" />
@@ -59,15 +67,26 @@ export function ChatPanel({ messages, pendingMessages, selfSocketId, onSend, onD
         )}
         {messages.map((message, index) => {
           const previous = messages[index - 1];
-          const grouped = previous && previous.author?.name === message.author?.name && message.createdAt - previous.createdAt < GROUP_WINDOW_MS;
+          const grouped =
+            previous &&
+            previous.author?.name === message.author?.name &&
+            message.createdAt - previous.createdAt < GROUP_WINDOW_MS;
           const isSelf = message.author?.socketId === selfSocketId;
           return (
             <article key={message.id} className={`chat-message ${grouped ? 'is-grouped' : ''}`}>
               {!grouped && (
                 <header className="chat-meta">
                   <Avatar name={message.author?.name} color={message.author?.color} size="sm" />
-                  <span className="chat-author">{message.author?.name}{isSelf && ' (you)'}</span>
-                  <time dateTime={new Date(message.createdAt).toISOString()} title={dateTimeFormat.format(message.createdAt)}>{timeFormat.format(message.createdAt)}</time>
+                  <span className="chat-author">
+                    {message.author?.name}
+                    {isSelf && ' (you)'}
+                  </span>
+                  <time
+                    dateTime={new Date(message.createdAt).toISOString()}
+                    title={dateTimeFormat.format(message.createdAt)}
+                  >
+                    {timeFormat.format(message.createdAt)}
+                  </time>
                 </header>
               )}
               <p className="chat-body">{message.body}</p>
@@ -75,23 +94,44 @@ export function ChatPanel({ messages, pendingMessages, selfSocketId, onSend, onD
           );
         })}
         {pendingMessages.map((message) => (
-          <article key={message.clientId} className={`chat-message is-pending ${message.status === 'failed' ? 'is-failed' : ''}`}>
+          <article
+            key={message.clientId}
+            className={`chat-message is-pending ${message.status === 'failed' ? 'is-failed' : ''}`}
+          >
             <p className="chat-body">{message.body}</p>
             <p className="chat-status">
               {message.status === 'failed' ? (
                 <>
                   <span>Not sent.</span>
-                  <IconButton label="Try sending again" size="sm" onClick={() => onSend(message.body, message.clientId)}><RotateCw size={14} aria-hidden="true" /></IconButton>
-                  <IconButton label="Discard message" size="sm" onClick={() => onDiscard(message.clientId)}><X size={14} aria-hidden="true" /></IconButton>
+                  <IconButton
+                    label="Try sending again"
+                    size="sm"
+                    onClick={() => onSend(message.body, message.clientId)}
+                  >
+                    <RotateCw size={14} aria-hidden="true" />
+                  </IconButton>
+                  <IconButton label="Discard message" size="sm" onClick={() => onDiscard(message.clientId)}>
+                    <X size={14} aria-hidden="true" />
+                  </IconButton>
                 </>
-              ) : <span>Sending…</span>}
+              ) : (
+                <span>Sending…</span>
+              )}
             </p>
           </article>
         ))}
       </div>
 
-      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); send(); }}>
-        <label className="sr-only" htmlFor="chat-input">Message the room</label>
+      <form
+        className="chat-composer"
+        onSubmit={(event) => {
+          event.preventDefault();
+          send();
+        }}
+      >
+        <label className="sr-only" htmlFor="chat-input">
+          Message the room
+        </label>
         <textarea
           id="chat-input"
           className="input"

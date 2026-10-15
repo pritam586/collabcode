@@ -2,8 +2,58 @@
 // Must match roomIdSchema on the server.
 export const ROOM_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
-const ADJECTIVES = ['amber', 'bold', 'brave', 'bright', 'calm', 'clever', 'cosmic', 'crisp', 'eager', 'fuzzy', 'gentle', 'happy', 'jolly', 'keen', 'lucky', 'mellow', 'nimble', 'quick', 'quiet', 'rapid', 'shiny', 'sunny', 'swift', 'witty'];
-const NOUNS = ['badger', 'comet', 'falcon', 'fox', 'gecko', 'heron', 'koala', 'lemur', 'lynx', 'maple', 'nova', 'otter', 'panda', 'pixel', 'quokka', 'raven', 'rocket', 'sparrow', 'tiger', 'walrus', 'wombat', 'yak', 'zebra', 'orca'];
+const ADJECTIVES = [
+  'amber',
+  'bold',
+  'brave',
+  'bright',
+  'calm',
+  'clever',
+  'cosmic',
+  'crisp',
+  'eager',
+  'fuzzy',
+  'gentle',
+  'happy',
+  'jolly',
+  'keen',
+  'lucky',
+  'mellow',
+  'nimble',
+  'quick',
+  'quiet',
+  'rapid',
+  'shiny',
+  'sunny',
+  'swift',
+  'witty',
+];
+const NOUNS = [
+  'badger',
+  'comet',
+  'falcon',
+  'fox',
+  'gecko',
+  'heron',
+  'koala',
+  'lemur',
+  'lynx',
+  'maple',
+  'nova',
+  'otter',
+  'panda',
+  'pixel',
+  'quokka',
+  'raven',
+  'rocket',
+  'sparrow',
+  'tiger',
+  'walrus',
+  'wombat',
+  'yak',
+  'zebra',
+  'orca',
+];
 
 function randomInt(max) {
   const values = new Uint32Array(1);

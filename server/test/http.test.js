@@ -17,11 +17,12 @@ describe('HTTP API', () => {
   });
   after(() => server.close());
 
-  const post = (path, body, headers = {}) => fetch(`${server.url}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: typeof body === 'string' ? body : JSON.stringify(body),
-  });
+  const post = (path, body, headers = {}) =>
+    fetch(`${server.url}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+    });
 
   test('GET /health reports ok with security headers and a request id', async () => {
     const response = await fetch(`${server.url}/health`);
@@ -101,9 +102,19 @@ test('POST /api/run is limited to 10 requests per minute per address', async () 
 
 test('POST /api/run validates the body before calling the runner', async () => {
   let calls = 0;
-  const server = await startTestServer({ runCode: async () => { calls += 1; return { stdout: '', stderr: '', exitCode: 0 }; } });
+  const server = await startTestServer({
+    runCode: async () => {
+      calls += 1;
+      return { stdout: '', stderr: '', exitCode: 0 };
+    },
+  });
   try {
-    const send = (body) => fetch(`${server.url}/api/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const send = (body) =>
+      fetch(`${server.url}/api/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
     const badLanguage = await send({ language: 'ruby', code: 'puts 1' });
     assert.equal(badLanguage.status, 400);

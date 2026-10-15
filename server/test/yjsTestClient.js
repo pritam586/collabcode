@@ -28,14 +28,20 @@ export class YjsTestClient {
     this.awareness.on('update', ({ added, updated, removed }, origin) => {
       if (origin === REMOTE || !this.joined) return;
       const changed = [...added, ...updated, ...removed].filter((id) => id === this.doc.clientID);
-      if (changed.length > 0) this.socket.emit('yjs-awareness', { roomId: this.roomId, data: encodeAwarenessUpdate(this.awareness, changed) });
+      if (changed.length > 0)
+        this.socket.emit('yjs-awareness', {
+          roomId: this.roomId,
+          data: encodeAwarenessUpdate(this.awareness, changed),
+        });
     });
   }
 
   connect() {
     this.socket = connect(this.url, { transports: ['websocket'], forceNew: true, reconnection: false });
     this.socket.onAny((event, payload) => this.events.push({ event, payload }));
-    this.socket.on('disconnect', () => { this.joined = false; });
+    this.socket.on('disconnect', () => {
+      this.joined = false;
+    });
     this.socket.on('yjs-sync', ({ data }) => this.handleSync(new Uint8Array(data)));
     this.socket.on('yjs-awareness', ({ data }) => applyAwarenessUpdate(this.awareness, new Uint8Array(data), REMOTE));
   }
@@ -44,7 +50,8 @@ export class YjsTestClient {
     const decoder = decoding.createDecoder(data);
     const encoder = encoding.createEncoder();
     const messageType = syncProtocol.readSyncMessage(decoder, encoder, this.doc, REMOTE);
-    if (encoding.length(encoder) > 0) this.socket.emit('yjs-sync', { roomId: this.roomId, data: encoding.toUint8Array(encoder) });
+    if (encoding.length(encoder) > 0)
+      this.socket.emit('yjs-sync', { roomId: this.roomId, data: encoding.toUint8Array(encoder) });
     if (messageType === syncProtocol.messageYjsSyncStep2) this.synced = true;
   }
 

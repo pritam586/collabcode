@@ -52,13 +52,16 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
 
   const run = useCallback(() => setRunRequest((value) => value + 1), []);
   // Running code reveals its output: the split panel on wide screens, the Output view on phones.
-  const showOutput = useCallback((visible) => {
-    if (compact) {
-      if (visible) setMobileView('output');
-    } else {
-      setIsOutputOpen(visible);
-    }
-  }, [compact]);
+  const showOutput = useCallback(
+    (visible) => {
+      if (compact) {
+        if (visible) setMobileView('output');
+      } else {
+        setIsOutputOpen(visible);
+      }
+    },
+    [compact],
+  );
 
   // Chat counts as read while it is on screen.
   const chatVisible = compact ? mobileView === 'chat' : sidebarOpen && sidebarTab === 'chat';
@@ -66,7 +69,11 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
   // Adjusting state during render (not in an effect) avoids a second render pass:
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   if (chatVisible && lastSeenMessageId !== latestMessageId) setLastSeenMessageId(latestMessageId);
-  const unreadCount = chatVisible ? 0 : session.messages.filter((message) => message.id > lastSeenMessageId && message.author?.socketId !== session.selfSocketId).length;
+  const unreadCount = chatVisible
+    ? 0
+    : session.messages.filter(
+        (message) => message.id > lastSeenMessageId && message.author?.socketId !== session.selfSocketId,
+      ).length;
 
   const share = useCallback(async () => {
     try {
@@ -87,7 +94,9 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
         run();
         return;
       }
-      const typingInField = event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"], .monaco-editor');
+      const typingInField =
+        event.target instanceof HTMLElement &&
+        event.target.closest('input, textarea, select, [contenteditable="true"], .monaco-editor');
       const isQuestionMark = event.key === '?' || (event.code === 'Slash' && event.shiftKey);
       if (isQuestionMark && !typingInField) {
         event.preventDefault();
@@ -99,7 +108,9 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
   }, [run]);
 
   const room = useMemo(() => ({ id: roomId, language: session.language }), [roomId, session.language]);
-  const typingNames = session.participants.filter((person) => typingSocketIds.has(person.socketId)).map((person) => person.name);
+  const typingNames = session.participants
+    .filter((person) => typingSocketIds.has(person.socketId))
+    .map((person) => person.name);
   const openTasks = taskList.tasks.filter((task) => !task.done).length;
   const peopleCount = session.participants.length;
 
@@ -109,14 +120,30 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
       label: 'People',
       icon: Users,
       badge: { count: peopleCount, label: `${peopleCount} in the room` },
-      content: <ParticipantsPanel participants={session.participants} selfSocketId={session.selfSocketId} typingSocketIds={typingSocketIds} onInvite={share} />,
+      content: (
+        <ParticipantsPanel
+          participants={session.participants}
+          selfSocketId={session.selfSocketId}
+          typingSocketIds={typingSocketIds}
+          onInvite={share}
+        />
+      ),
     },
     {
       id: 'chat',
       label: 'Chat',
       icon: MessageSquare,
       badge: { count: unreadCount, label: `${unreadCount} unread`, accent: true },
-      content: <ChatPanel messages={session.messages} pendingMessages={session.pendingMessages} selfSocketId={session.selfSocketId} onSend={session.sendMessage} onDiscard={session.discardMessage} isVisible={chatVisible} />,
+      content: (
+        <ChatPanel
+          messages={session.messages}
+          pendingMessages={session.pendingMessages}
+          selfSocketId={session.selfSocketId}
+          onSend={session.sendMessage}
+          onDiscard={session.discardMessage}
+          isVisible={chatVisible}
+        />
+      ),
     },
     {
       id: 'tasks',
@@ -132,7 +159,13 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
 
   return (
     <div className={`workspace ${compact ? 'is-compact' : ''} ${sidebarOpen && !compact ? 'sidebar-open' : ''}`}>
-      <a className="skip-link" href="#editor-region" onClick={() => editorRegionRef.current?.querySelector('textarea')?.focus()}>Skip to the editor</a>
+      <a
+        className="skip-link"
+        href="#editor-region"
+        onClick={() => editorRegionRef.current?.querySelector('textarea')?.focus()}
+      >
+        Skip to the editor
+      </a>
       <WorkspaceHeader
         compact={compact}
         roomId={roomId}
@@ -155,8 +188,17 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
       />
 
       <div className="workspace-body">
-        <main className="editor-column" id="editor-region" ref={editorRegionRef} aria-label="Code editor" hidden={!editorVisible}>
-          <div className="file-tab"><span className={`file-dot file-dot-${session.language}`} aria-hidden="true" /> untitled.{getFileExtension(session.language)}</div>
+        <main
+          className="editor-column"
+          id="editor-region"
+          ref={editorRegionRef}
+          aria-label="Code editor"
+          hidden={!editorVisible}
+        >
+          <div className="file-tab">
+            <span className={`file-dot file-dot-${session.language}`} aria-hidden="true" /> untitled.
+            {getFileExtension(session.language)}
+          </div>
           <Suspense fallback={<EditorFallback />}>
             <EditorPane
               key={roomId}
@@ -171,16 +213,35 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
               fontSize={fontSize}
             />
           </Suspense>
-          <StatusBar status={session.status} typingNames={typingNames} language={session.language} fontSize={fontSize} />
+          <StatusBar
+            status={session.status}
+            typingNames={typingNames}
+            language={session.language}
+            fontSize={fontSize}
+          />
         </main>
 
         {compact
           ? sections.map((section) => (
-            <section key={section.id} id={`mobile-panel-${section.id}`} className="mobile-panel" role="tabpanel" aria-label={section.label} hidden={mobileView !== section.id}>
-              {section.content}
-            </section>
-          ))
-          : sidebarOpen && <Sidebar sections={sections} selectedTab={sidebarTab} onSelectTab={setSidebarTab} onClose={() => setSidebarOpen(false)} />}
+              <section
+                key={section.id}
+                id={`mobile-panel-${section.id}`}
+                className="mobile-panel"
+                role="tabpanel"
+                aria-label={section.label}
+                hidden={mobileView !== section.id}
+              >
+                {section.content}
+              </section>
+            ))
+          : sidebarOpen && (
+              <Sidebar
+                sections={sections}
+                selectedTab={sidebarTab}
+                onSelectTab={setSidebarTab}
+                onClose={() => setSidebarOpen(false)}
+              />
+            )}
       </div>
 
       {compact && (
@@ -192,7 +253,13 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
             { id: 'output', label: 'Output', icon: SquareTerminal, controls: 'editor-region' },
             ...['chat', 'tasks', 'people'].map((id) => {
               const section = sections.find((item) => item.id === id);
-              return { id, label: section.label, icon: section.icon, badge: section.badge, controls: `mobile-panel-${id}` };
+              return {
+                id,
+                label: section.label,
+                icon: section.icon,
+                badge: section.badge,
+                controls: `mobile-panel-${id}`,
+              };
             }),
           ]}
         />
@@ -200,7 +267,11 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
 
       <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <ShareDialog open={shareOpen} roomId={roomId} onClose={() => setShareOpen(false)} />
-      <OnboardingTour onOpenSidebar={() => { if (!compact) setSidebarOpen(true); }} />
+      <OnboardingTour
+        onOpenSidebar={() => {
+          if (!compact) setSidebarOpen(true);
+        }}
+      />
     </div>
   );
 }
@@ -211,9 +282,13 @@ function EditorFallback() {
       <div className="editor-surface">
         <div className="editor-loading" role="status">
           <div className="editor-loading-lines" aria-hidden="true">
-            {[64, 42, 78, 30, 56].map((width, index) => <span key={index} className="skeleton skeleton-line" style={{ width: `${width}%` }} />)}
+            {[64, 42, 78, 30, 56].map((width, index) => (
+              <span key={index} className="skeleton skeleton-line" style={{ width: `${width}%` }} />
+            ))}
           </div>
-          <p><span className="spinner" aria-hidden="true" /> Loading the editor…</p>
+          <p>
+            <span className="spinner" aria-hidden="true" /> Loading the editor…
+          </p>
         </div>
       </div>
     </div>

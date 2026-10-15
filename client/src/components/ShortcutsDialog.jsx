@@ -19,12 +19,17 @@ export function ShortcutsDialog({ open, onClose }) {
       <table className="shortcut-table">
         <caption className="sr-only">Keyboard shortcuts</caption>
         <thead className="sr-only">
-          <tr><th scope="col">Keys</th><th scope="col">Action</th></tr>
+          <tr>
+            <th scope="col">Keys</th>
+            <th scope="col">Action</th>
+          </tr>
         </thead>
         <tbody>
           {SHORTCUTS.map(({ keys, action }) => (
             <tr key={keys}>
-              <td><Shortcut keys={keys} /></td>
+              <td>
+                <Shortcut keys={keys} />
+              </td>
               <td>{action}</td>
             </tr>
           ))}

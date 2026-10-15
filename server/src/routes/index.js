@@ -8,7 +8,10 @@ export function createRoutes({ controllers }) {
 
   router.get('/health', controllers.health.show);
 
-  router.use('/api', rateLimit({ windowMs: 60_000, maxRequests: 120, message: 'Too many requests. Try again in a minute.' }));
+  router.use(
+    '/api',
+    rateLimit({ windowMs: 60_000, maxRequests: 120, message: 'Too many requests. Try again in a minute.' }),
+  );
   router.post(
     '/api/run',
     rateLimit({ windowMs: 60_000, maxRequests: 10, message: 'Too many run requests. Try again in a minute.' }),

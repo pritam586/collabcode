@@ -22,12 +22,15 @@ export function createChatRepository(db) {
 
     // Oldest first.
     recent(roomId, limit) {
-      return recentStatement.all(roomId, limit).reverse().map((row) => ({
-        id: Number(row.id),
-        author: { name: row.author_name, color: row.author_color },
-        body: row.body,
-        createdAt: Number(row.created_at),
-      }));
+      return recentStatement
+        .all(roomId, limit)
+        .reverse()
+        .map((row) => ({
+          id: Number(row.id),
+          author: { name: row.author_name, color: row.author_color },
+          body: row.body,
+          createdAt: Number(row.created_at),
+        }));
     },
 
     trim(roomId, keep) {

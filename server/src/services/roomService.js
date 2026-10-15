@@ -109,16 +109,18 @@ export function createRoomService({
     if (!repository || roomIds.length === 0) return;
     const toSave = roomIds.map((id) => rooms.get(id)).filter(Boolean);
     try {
-      repository.saveMany(toSave.map((room) => ({
-        id: room.id,
-        content: room.text.toString(),
-        ydoc: Y.encodeStateAsUpdate(room.doc),
-        language: room.language,
-        docVersion: room.docVersion,
-        createdAt: room.createdAt,
-        updatedAt: room.updatedAt,
-        lastActiveAt: room.lastActiveAt,
-      })));
+      repository.saveMany(
+        toSave.map((room) => ({
+          id: room.id,
+          content: room.text.toString(),
+          ydoc: Y.encodeStateAsUpdate(room.doc),
+          language: room.language,
+          docVersion: room.docVersion,
+          createdAt: room.createdAt,
+          updatedAt: room.updatedAt,
+          lastActiveAt: room.lastActiveAt,
+        })),
+      );
       for (const room of toSave) {
         room.persisted = true;
         dirtyRoomIds.delete(room.id);
@@ -173,7 +175,9 @@ export function createRoomService({
       const room = rooms.get(roomId);
       if (!room || !room.participants.delete(socketId)) return false;
 
-      const ownedClientIds = [...room.awarenessOwners].filter(([, owner]) => owner === socketId).map(([clientId]) => clientId);
+      const ownedClientIds = [...room.awarenessOwners]
+        .filter(([, owner]) => owner === socketId)
+        .map(([clientId]) => clientId);
       for (const clientId of ownedClientIds) room.awarenessOwners.delete(clientId);
       if (ownedClientIds.length > 0) removeAwarenessStates(room.awareness, ownedClientIds, SERVER_ORIGIN);
 
@@ -239,7 +243,13 @@ export function createRoomService({
         save([room.id]);
         if (!room.persisted) return null;
         try {
-          message.id = chatRepository.add({ roomId, authorName: participant.name, authorColor: participant.color, body, createdAt: message.createdAt });
+          message.id = chatRepository.add({
+            roomId,
+            authorName: participant.name,
+            authorColor: participant.color,
+            body,
+            createdAt: message.createdAt,
+          });
           if (message.id % 50 === 0) chatRepository.trim(roomId, CHAT_MESSAGES_KEPT);
         } catch (error) {
           logger?.error({ err: error, roomId }, 'Failed to save chat message');

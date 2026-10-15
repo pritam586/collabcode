@@ -18,7 +18,12 @@ export default defineConfig({
           if (id.includes('vite/preload-helper')) return 'runtime';
           if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
           if (id.includes('node_modules/monaco-editor') || id.includes('node_modules/@monaco-editor')) return 'monaco';
-          if (id.includes('node_modules/yjs') || id.includes('node_modules/y-protocols') || id.includes('node_modules/lib0')) return 'yjs';
+          if (
+            id.includes('node_modules/yjs') ||
+            id.includes('node_modules/y-protocols') ||
+            id.includes('node_modules/lib0')
+          )
+            return 'yjs';
           return undefined;
         },
       },

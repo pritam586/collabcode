@@ -26,7 +26,12 @@ export function runMigrations(db, pending, logger) {
     applied_at INTEGER NOT NULL
   ) STRICT`);
 
-  const applied = new Set(db.prepare('SELECT version FROM schema_migrations').all().map((row) => row.version));
+  const applied = new Set(
+    db
+      .prepare('SELECT version FROM schema_migrations')
+      .all()
+      .map((row) => row.version),
+  );
   const record = db.prepare('INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)');
 
   for (const migration of [...pending].sort((a, b) => a.version - b.version)) {

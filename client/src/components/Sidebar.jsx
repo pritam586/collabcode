@@ -16,7 +16,9 @@ export function Sidebar({ sections, selectedTab, onSelectTab, onClose }) {
   return (
     <aside className="sidebar" id="workspace-sidebar" aria-label="People, chat and tasks">
       <div className="sidebar-close">
-        <IconButton label="Close sidebar" size="sm" onClick={onClose}><X size={16} aria-hidden="true" /></IconButton>
+        <IconButton label="Close sidebar" size="sm" onClick={onClose}>
+          <X size={16} aria-hidden="true" />
+        </IconButton>
       </div>
       <Tabs label="Sidebar" tabs={tabs} selectedId={selectedTab} onSelect={onSelectTab} />
     </aside>
@@ -28,7 +30,9 @@ export function CountBadge({ count = 0, label = '', accent = false }) {
   if (count <= 0) return null;
   return (
     <>
-      <span className={`badge ${accent ? 'badge-accent' : ''}`} aria-hidden="true">{count}</span>
+      <span className={`badge ${accent ? 'badge-accent' : ''}`} aria-hidden="true">
+        {count}
+      </span>
       <span className="sr-only">, {label}</span>
     </>
   );

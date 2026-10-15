@@ -4,7 +4,8 @@ import { useToast } from '../components/ui/useToast.js';
 import { createId } from '../lib/storage.js';
 import { socket } from '../socket.js';
 
-const TOO_LARGE_MESSAGE = 'That change is too large to share (the limit is 100,000 characters), so your editor was reset to the shared version.';
+const TOO_LARGE_MESSAGE =
+  'That change is too large to share (the limit is 100,000 characters), so your editor was reset to the shared version.';
 const OFFLINE_TOAST_ID = 'connection';
 
 // Connects to the server, joins `roomId` as `name`, and keeps everything about the live room:
@@ -53,7 +54,9 @@ export function useRoomSession(roomId, name) {
       setPendingMessages((current) => current.map((message) => ({ ...message, status: 'failed' })));
       // A deliberate disconnect (leaving the room) needs no warning.
       if (reason !== 'io client disconnect') {
-        toast.warning('Connection lost. Keep typing; your changes will sync when you are back online.', { id: OFFLINE_TOAST_ID });
+        toast.warning('Connection lost. Keep typing; your changes will sync when you are back online.', {
+          id: OFFLINE_TOAST_ID,
+        });
       }
     }
 
@@ -84,8 +87,10 @@ export function useRoomSession(roomId, name) {
       setStatus('failed');
     }
 
-    const handleParticipantJoined = (participant) => setParticipants((current) => [...current.filter((item) => item.socketId !== participant.socketId), participant]);
-    const handleParticipantLeft = ({ socketId }) => setParticipants((current) => current.filter((item) => item.socketId !== socketId));
+    const handleParticipantJoined = (participant) =>
+      setParticipants((current) => [...current.filter((item) => item.socketId !== participant.socketId), participant]);
+    const handleParticipantLeft = ({ socketId }) =>
+      setParticipants((current) => current.filter((item) => item.socketId !== socketId));
     const handleLanguageChanged = ({ language: next }) => setLanguage(next);
     const handleServerError = ({ message }) => toast.error(message);
 
@@ -95,13 +100,19 @@ export function useRoomSession(roomId, name) {
     }
 
     function handleChatMessage(message) {
-      setMessages((current) => (current.some((item) => item.id === message.id) ? current : [...current, message].slice(-200)));
-      if (message.clientId) setPendingMessages((current) => current.filter((item) => item.clientId !== message.clientId));
+      setMessages((current) =>
+        current.some((item) => item.id === message.id) ? current : [...current, message].slice(-200),
+      );
+      if (message.clientId)
+        setPendingMessages((current) => current.filter((item) => item.clientId !== message.clientId));
     }
 
     function handleChatError({ message, clientId }) {
       toast.error(message);
-      if (clientId) setPendingMessages((current) => current.map((item) => (item.clientId === clientId ? { ...item, status: 'failed' } : item)));
+      if (clientId)
+        setPendingMessages((current) =>
+          current.map((item) => (item.clientId === clientId ? { ...item, status: 'failed' } : item)),
+        );
     }
 
     const listeners = {
@@ -140,19 +151,25 @@ export function useRoomSession(roomId, name) {
     });
   }, [provider, toast, resetProvider]);
 
-  const changeLanguage = useCallback((next) => {
-    setLanguage(next);
-    socket.emit('language-change', { roomId, language: next });
-  }, [roomId]);
+  const changeLanguage = useCallback(
+    (next) => {
+      setLanguage(next);
+      socket.emit('language-change', { roomId, language: next });
+    },
+    [roomId],
+  );
 
-  const sendMessage = useCallback((body, existingClientId) => {
-    const clientId = existingClientId ?? createId();
-    const online = joinedRef.current && socket.connected;
-    const pending = { clientId, body, createdAt: Date.now(), status: online ? 'sending' : 'failed' };
-    setPendingMessages((current) => [...current.filter((item) => item.clientId !== clientId), pending]);
-    if (online) socket.emit('chat-send', { roomId, body, clientId });
-    else toast.warning('You are offline. Your message will be kept here so you can resend it.');
-  }, [roomId, toast]);
+  const sendMessage = useCallback(
+    (body, existingClientId) => {
+      const clientId = existingClientId ?? createId();
+      const online = joinedRef.current && socket.connected;
+      const pending = { clientId, body, createdAt: Date.now(), status: online ? 'sending' : 'failed' };
+      setPendingMessages((current) => [...current.filter((item) => item.clientId !== clientId), pending]);
+      if (online) socket.emit('chat-send', { roomId, body, clientId });
+      else toast.warning('You are offline. Your message will be kept here so you can resend it.');
+    },
+    [roomId, toast],
+  );
 
   const discardMessage = useCallback((clientId) => {
     setPendingMessages((current) => current.filter((item) => item.clientId !== clientId));

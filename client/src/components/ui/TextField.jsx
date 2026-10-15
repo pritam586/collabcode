@@ -14,7 +14,9 @@ export const TextField = forwardRef(function TextField(
 
   return (
     <div className={`field ${className}`}>
-      <label className={hideLabel ? 'sr-only' : 'field-label'} htmlFor={inputId}>{label}</label>
+      <label className={hideLabel ? 'sr-only' : 'field-label'} htmlFor={inputId}>
+        {label}
+      </label>
       <Element
         ref={ref}
         id={inputId}
@@ -23,8 +25,16 @@ export const TextField = forwardRef(function TextField(
         aria-describedby={[hintId, errorId].filter(Boolean).join(' ') || undefined}
         {...props}
       />
-      {hint && !error && <p className="field-hint" id={hintId}>{hint}</p>}
-      {error && <p className="field-error" id={errorId} role="alert">{error}</p>}
+      {hint && !error && (
+        <p className="field-hint" id={hintId}>
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p className="field-error" id={errorId} role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 });

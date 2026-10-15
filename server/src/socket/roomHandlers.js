@@ -9,23 +9,30 @@ const INVALID_JOIN_MESSAGE = `Use a room ID up to ${MAX_ROOM_ID_LENGTH} characte
 export function registerRoomHandlers(io, socket, { roomService, logger }) {
   const on = createEventHandler(socket, logger);
 
-  on('join-room', joinRoomSchema, ({ roomId, name }) => {
-    leaveCurrentRoom(socket, roomService);
+  on(
+    'join-room',
+    joinRoomSchema,
+    ({ roomId, name }) => {
+      leaveCurrentRoom(socket, roomService);
 
-    const result = roomService.join(roomId, socket.id, name);
-    if (!result.ok) {
-      socket.emit('room-error', { message: `This room is full. Up to ${result.maxParticipants} people can be in a room at once.` });
-      return;
-    }
+      const result = roomService.join(roomId, socket.id, name);
+      if (!result.ok) {
+        socket.emit('room-error', {
+          message: `This room is full. Up to ${result.maxParticipants} people can be in a room at once.`,
+        });
+        return;
+      }
 
-    socket.join(roomId);
-    socket.data.roomId = roomId;
-    socket.emit('room-sync', { roomId, ...roomService.snapshot(result.room) });
-    socket.to(roomId).emit('participant-joined', { socketId: socket.id, ...result.participant });
+      socket.join(roomId);
+      socket.data.roomId = roomId;
+      socket.emit('room-sync', { roomId, ...roomService.snapshot(result.room) });
+      socket.to(roomId).emit('participant-joined', { socketId: socket.id, ...result.participant });
 
-    // Cursors are sent when the client asks for the document (its sync step 1).
-    sendSyncStep1(socket, result.room);
-  }, { onInvalid: () => socket.emit('room-error', { message: INVALID_JOIN_MESSAGE }) });
+      // Cursors are sent when the client asks for the document (its sync step 1).
+      sendSyncStep1(socket, result.room);
+    },
+    { onInvalid: () => socket.emit('room-error', { message: INVALID_JOIN_MESSAGE }) },
+  );
 
   on('leave-room', z.any(), () => leaveCurrentRoom(socket, roomService));
 

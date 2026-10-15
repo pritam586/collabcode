@@ -18,25 +18,37 @@ export function ToastProvider({ children }) {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const schedule = useCallback((id, type) => {
-    clearTimeout(timers.current.get(id));
-    timers.current.set(id, setTimeout(() => dismiss(id), DURATIONS[type]));
-  }, [dismiss]);
+  const schedule = useCallback(
+    (id, type) => {
+      clearTimeout(timers.current.get(id));
+      timers.current.set(
+        id,
+        setTimeout(() => dismiss(id), DURATIONS[type]),
+      );
+    },
+    [dismiss],
+  );
 
-  const show = useCallback((type, message, { id = crypto.randomUUID() } = {}) => {
-    // Reusing an id replaces that toast instead of stacking duplicates (e.g. "Reconnecting").
-    setToasts((current) => [...current.filter((toast) => toast.id !== id), { id, type, message }].slice(-4));
-    schedule(id, type);
-    return id;
-  }, [schedule]);
+  const show = useCallback(
+    (type, message, { id = crypto.randomUUID() } = {}) => {
+      // Reusing an id replaces that toast instead of stacking duplicates (e.g. "Reconnecting").
+      setToasts((current) => [...current.filter((toast) => toast.id !== id), { id, type, message }].slice(-4));
+      schedule(id, type);
+      return id;
+    },
+    [schedule],
+  );
 
-  const api = useMemo(() => ({
-    success: (message, options) => show('success', message, options),
-    error: (message, options) => show('error', message, options),
-    warning: (message, options) => show('warning', message, options),
-    info: (message, options) => show('info', message, options),
-    dismiss,
-  }), [show, dismiss]);
+  const api = useMemo(
+    () => ({
+      success: (message, options) => show('success', message, options),
+      error: (message, options) => show('error', message, options),
+      warning: (message, options) => show('warning', message, options),
+      info: (message, options) => show('info', message, options),
+      dismiss,
+    }),
+    [show, dismiss],
+  );
 
   const renderToast = (toast) => {
     const Icon = ICONS[toast.type];
@@ -51,7 +63,9 @@ export function ToastProvider({ children }) {
       >
         <Icon className="toast-icon" size={18} aria-hidden="true" />
         <p className="toast-message">{toast.message}</p>
-        <IconButton label="Dismiss notification" size="sm" onClick={() => dismiss(toast.id)}><X size={16} aria-hidden="true" /></IconButton>
+        <IconButton label="Dismiss notification" size="sm" onClick={() => dismiss(toast.id)}>
+          <X size={16} aria-hidden="true" />
+        </IconButton>
       </div>
     );
   };
@@ -61,7 +75,9 @@ export function ToastProvider({ children }) {
       {children}
       <div className="toast-region">
         <div role="alert">{toasts.filter((toast) => toast.type === 'error').map(renderToast)}</div>
-        <div role="status" aria-live="polite">{toasts.filter((toast) => toast.type !== 'error').map(renderToast)}</div>
+        <div role="status" aria-live="polite">
+          {toasts.filter((toast) => toast.type !== 'error').map(renderToast)}
+        </div>
       </div>
     </ToastContext.Provider>
   );

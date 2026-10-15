@@ -23,12 +23,16 @@ export function createSocketServer(httpServer, { corsOrigin, isAllowedOrigin, ro
   });
 
   // Relay every accepted change to the rest of the room. The sender already has it.
-  const roomExceptOrigin = (room, origin) => (io.sockets.sockets.has(origin) ? io.to(room.id).except(origin) : io.to(room.id));
+  const roomExceptOrigin = (room, origin) =>
+    io.sockets.sockets.has(origin) ? io.to(room.id).except(origin) : io.to(room.id);
   roomService.on('document-update', (room, update, origin) => {
     roomExceptOrigin(room, origin).emit('yjs-sync', { roomId: room.id, data: encodeUpdate(update) });
   });
   roomService.on('awareness-update', (room, clientIds, origin) => {
-    roomExceptOrigin(room, origin).emit('yjs-awareness', { roomId: room.id, data: encodeAwarenessUpdate(room.awareness, clientIds) });
+    roomExceptOrigin(room, origin).emit('yjs-awareness', {
+      roomId: room.id,
+      data: encodeAwarenessUpdate(room.awareness, clientIds),
+    });
   });
 
   const context = { roomService, logger };

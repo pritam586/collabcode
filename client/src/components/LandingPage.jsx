@@ -7,11 +7,23 @@ import { generateRoomId, parseRoomInput, randomGuestName, roomPath } from '../li
 import { readSavedName, saveName } from '../hooks/usePreferences.js';
 
 const FEATURES = [
-  { icon: MousePointer2, title: 'Live cursors', text: 'See who is in the room, where they are working, and who is typing.' },
+  {
+    icon: MousePointer2,
+    title: 'Live cursors',
+    text: 'See who is in the room, where they are working, and who is typing.',
+  },
   { icon: Play, title: 'Run code', text: 'Run JavaScript, TypeScript, Python, Java and C++ in a locked-down sandbox.' },
-  { icon: MessageSquare, title: 'Chat built in', text: 'Talk it through next to the code, with history kept for the room.' },
+  {
+    icon: MessageSquare,
+    title: 'Chat built in',
+    text: 'Talk it through next to the code, with history kept for the room.',
+  },
   { icon: ListChecks, title: 'Shared tasks', text: 'Keep a to-do list everyone in the room can tick off.' },
-  { icon: WifiOff, title: 'Works offline', text: 'Keep typing through a dropped connection; edits merge when you are back.' },
+  {
+    icon: WifiOff,
+    title: 'Works offline',
+    text: 'Keep typing through a dropped connection; edits merge when you are back.',
+  },
   { icon: Code2, title: 'No sign-up', text: 'Pick a name and share a link. That is the whole setup.' },
 ];
 
@@ -50,15 +62,25 @@ export function LandingPage({ navigate, themeControls, onPrepareRoom }) {
   return (
     <div className="landing">
       <header className="landing-nav">
-        <span className="brand"><span className="brand-mark" aria-hidden="true">&lt;/&gt;</span> CollabCode</span>
+        <span className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            &lt;/&gt;
+          </span>{' '}
+          CollabCode
+        </span>
         <ThemeToggle {...themeControls} />
       </header>
 
       <main className="landing-main">
         <section className="hero" aria-labelledby="hero-title">
           <p className="eyebrow">Real-time collaborative code editor</p>
-          <h1 id="hero-title">Code together, <span>in the same file,</span> right now.</h1>
-          <p className="hero-copy">Open a room, send the link, and edit side by side with live cursors, chat, shared tasks and a sandboxed code runner. No accounts, no installs.</p>
+          <h1 id="hero-title">
+            Code together, <span>in the same file,</span> right now.
+          </h1>
+          <p className="hero-copy">
+            Open a room, send the link, and edit side by side with live cursors, chat, shared tasks and a sandboxed code
+            runner. No accounts, no installs.
+          </p>
         </section>
 
         <section className="start-card" aria-label="Start collaborating">
@@ -69,13 +91,26 @@ export function LandingPage({ navigate, themeControls, onPrepareRoom }) {
             maxLength={32}
             autoComplete="nickname"
             error={nameError}
-            onChange={(event) => { setName(event.target.value); setNameError(''); }}
+            onChange={(event) => {
+              setName(event.target.value);
+              setNameError('');
+            }}
           />
-          <Button variant="primary" size="lg" block icon={<ArrowRight size={18} aria-hidden="true" />} onClick={createRoom} onPointerEnter={onPrepareRoom} onFocus={onPrepareRoom}>
+          <Button
+            variant="primary"
+            size="lg"
+            block
+            icon={<ArrowRight size={18} aria-hidden="true" />}
+            onClick={createRoom}
+            onPointerEnter={onPrepareRoom}
+            onFocus={onPrepareRoom}
+          >
             Create a room
           </Button>
 
-          <div className="divider" role="separator"><span>or join one</span></div>
+          <div className="divider" role="separator">
+            <span>or join one</span>
+          </div>
 
           <form className="join-form" onSubmit={joinRoom} onFocus={onPrepareRoom} noValidate>
             <TextField
@@ -85,14 +120,21 @@ export function LandingPage({ navigate, themeControls, onPrepareRoom }) {
               autoComplete="off"
               spellCheck={false}
               error={joinError}
-              onChange={(event) => { setJoinCode(event.target.value); setJoinError(''); }}
+              onChange={(event) => {
+                setJoinCode(event.target.value);
+                setJoinError('');
+              }}
             />
-            <Button type="submit" variant="secondary" block>Join room</Button>
+            <Button type="submit" variant="secondary" block>
+              Join room
+            </Button>
           </form>
         </section>
 
         <section className="features" aria-labelledby="features-title">
-          <h2 id="features-title" className="sr-only">Features</h2>
+          <h2 id="features-title" className="sr-only">
+            Features
+          </h2>
           <ul className="feature-grid">
             {FEATURES.map(({ icon: Icon, title, text }) => (
               <li key={title} className="feature">
@@ -107,9 +149,15 @@ export function LandingPage({ navigate, themeControls, onPrepareRoom }) {
         <section className="how-it-works" aria-labelledby="how-title">
           <h2 id="how-title">How it works</h2>
           <ol>
-            <li><strong>Create a room.</strong> You get a private link like <code>/r/swift-otter-4821</code>.</li>
-            <li><strong>Share the link.</strong> Anyone with it can join; they just pick a name.</li>
-            <li><strong>Build together.</strong> Edit, run, chat and track tasks in one place.</li>
+            <li>
+              <strong>Create a room.</strong> You get a private link like <code>/r/swift-otter-4821</code>.
+            </li>
+            <li>
+              <strong>Share the link.</strong> Anyone with it can join; they just pick a name.
+            </li>
+            <li>
+              <strong>Build together.</strong> Edit, run, chat and track tasks in one place.
+            </li>
           </ol>
         </section>
       </main>

@@ -43,7 +43,8 @@ export function createCodeRunner({ enabled = true, dockerBin = 'docker', images 
     if (!enabled) {
       throw new CodeRunnerError('The code runner is disabled on this server.', 503);
     }
-    if (!runnerTemplates[language]) throw new CodeRunnerError('Only Java, TypeScript, Python, and C++ are supported by this runner.');
+    if (!runnerTemplates[language])
+      throw new CodeRunnerError('Only Java, TypeScript, Python, and C++ are supported by this runner.');
     if (typeof code !== 'string' || code.length === 0 || code.length > MAX_RUN_CODE_LENGTH) {
       throw new CodeRunnerError(`Code must be between 1 and ${MAX_RUN_CODE_LENGTH} characters.`);
     }
@@ -79,18 +80,31 @@ function extractJavaClassName(code) {
 function runInDocker(dockerBin, workingDirectory, runner) {
   const containerName = `collabcode-run-${randomBytes(8).toString('hex')}`;
   const args = [
-    'run', '--rm', '--name', containerName,
-    '--network', 'none',
+    'run',
+    '--rm',
+    '--name',
+    containerName,
+    '--network',
+    'none',
     '--read-only',
-    '--pids-limit', '64',
-    '--memory', '256m',
-    '--cpus', '1',
-    '--cap-drop', 'ALL',
-    '--security-opt', 'no-new-privileges',
-    '--tmpfs', '/tmp:rw,nosuid,size=64m,exec',
-    '--mount', `type=bind,source=${workingDirectory},target=/code,readonly`,
+    '--pids-limit',
+    '64',
+    '--memory',
+    '256m',
+    '--cpus',
+    '1',
+    '--cap-drop',
+    'ALL',
+    '--security-opt',
+    'no-new-privileges',
+    '--tmpfs',
+    '/tmp:rw,nosuid,size=64m,exec',
+    '--mount',
+    `type=bind,source=${workingDirectory},target=/code,readonly`,
     runner.image,
-    'sh', '-c', runner.command,
+    'sh',
+    '-c',
+    runner.command,
   ];
 
   return new Promise((resolve, reject) => {
@@ -105,8 +119,12 @@ function runInDocker(dockerBin, workingDirectory, runner) {
       cleanupContainer();
     }, RUN_TIMEOUT_MS);
 
-    dockerProcess.stdout.on('data', (chunk) => { stdout = appendOutput(stdout, chunk); });
-    dockerProcess.stderr.on('data', (chunk) => { stderr = appendOutput(stderr, chunk); });
+    dockerProcess.stdout.on('data', (chunk) => {
+      stdout = appendOutput(stdout, chunk);
+    });
+    dockerProcess.stderr.on('data', (chunk) => {
+      stderr = appendOutput(stderr, chunk);
+    });
     dockerProcess.on('error', () => {
       clearTimeout(timeout);
       reject(new CodeRunnerError('Docker Desktop is unavailable. Start Docker Desktop and try again.', 503));
@@ -131,11 +149,18 @@ function runInDocker(dockerBin, workingDirectory, runner) {
 // container cannot start; that text must not be shown as if the user's program wrote it.
 export function classifyDockerFailure(exitCode, stderr) {
   if (exitCode === 0) return null;
-  if (/failed to connect to the docker API|Cannot connect to the Docker daemon|error during connect|docker daemon is not running/i.test(stderr)) {
+  if (
+    /failed to connect to the docker API|Cannot connect to the Docker daemon|error during connect|docker daemon is not running/i.test(
+      stderr,
+    )
+  ) {
     return new CodeRunnerError('Docker Desktop is not running. Start Docker Desktop and try again.', 503);
   }
   if (exitCode === 125 && /^docker: /m.test(stderr)) {
-    return new CodeRunnerError('Docker could not start the runner container. Check that Docker can pull the runner image and try again.', 503);
+    return new CodeRunnerError(
+      'Docker could not start the runner container. Check that Docker can pull the runner image and try again.',
+      503,
+    );
   }
   return null;
 }

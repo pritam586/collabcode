@@ -6,9 +6,15 @@ export function Select({ label, hideLabel = true, options, className = '', ...pr
   const id = useId();
   return (
     <span className={className}>
-      <label className={hideLabel ? 'sr-only' : 'field-label'} htmlFor={id}>{label}</label>
+      <label className={hideLabel ? 'sr-only' : 'field-label'} htmlFor={id}>
+        {label}
+      </label>
       <select id={id} className="select" {...props}>
-        {options.map(({ value, label: optionLabel }) => <option key={value} value={value}>{optionLabel}</option>)}
+        {options.map(({ value, label: optionLabel }) => (
+          <option key={value} value={value}>
+            {optionLabel}
+          </option>
+        ))}
       </select>
     </span>
   );

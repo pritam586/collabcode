@@ -35,7 +35,9 @@ export function TasksPanel({ taskList, name }) {
   return (
     <div className="panel tasks-panel">
       <form className="task-form" onSubmit={submit}>
-        <label className="sr-only" htmlFor="task-input">New task</label>
+        <label className="sr-only" htmlFor="task-input">
+          New task
+        </label>
         <input
           id="task-input"
           className="input"
@@ -45,12 +47,16 @@ export function TasksPanel({ taskList, name }) {
           disabled={atLimit}
           onChange={(event) => setDraft(event.target.value)}
         />
-        <IconButton type="submit" label="Add task" disabled={!draft.trim() || atLimit}><Plus size={18} aria-hidden="true" /></IconButton>
+        <IconButton type="submit" label="Add task" disabled={!draft.trim() || atLimit}>
+          <Plus size={18} aria-hidden="true" />
+        </IconButton>
       </form>
 
       {tasks.length > 0 && (
         <div className="task-progress">
-          <span>{doneCount} of {tasks.length} done</span>
+          <span>
+            {doneCount} of {tasks.length} done
+          </span>
           <progress max={tasks.length} value={doneCount} aria-label="Tasks completed" />
         </div>
       )}
@@ -66,8 +72,16 @@ export function TasksPanel({ taskList, name }) {
           {tasks.map((task) => (
             <li key={task.id} className={`task ${task.done ? 'is-done' : ''}`}>
               {editingId === task.id ? (
-                <form className="task-edit" onSubmit={(event) => { event.preventDefault(); finishEditing(true); }}>
-                  <label className="sr-only" htmlFor={`task-edit-${task.id}`}>Edit task</label>
+                <form
+                  className="task-edit"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    finishEditing(true);
+                  }}
+                >
+                  <label className="sr-only" htmlFor={`task-edit-${task.id}`}>
+                    Edit task
+                  </label>
                   <input
                     id={`task-edit-${task.id}`}
                     className="input"
@@ -75,10 +89,16 @@ export function TasksPanel({ taskList, name }) {
                     maxLength={MAX_TASK_LENGTH}
                     ref={editInputRef}
                     onChange={(event) => setEditText(event.target.value)}
-                    onKeyDown={(event) => { if (event.key === 'Escape') finishEditing(false); }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') finishEditing(false);
+                    }}
                   />
-                  <IconButton type="submit" size="sm" label="Save task"><Check size={14} aria-hidden="true" /></IconButton>
-                  <IconButton size="sm" label="Cancel editing" onClick={() => finishEditing(false)}><X size={14} aria-hidden="true" /></IconButton>
+                  <IconButton type="submit" size="sm" label="Save task">
+                    <Check size={14} aria-hidden="true" />
+                  </IconButton>
+                  <IconButton size="sm" label="Cancel editing" onClick={() => finishEditing(false)}>
+                    <X size={14} aria-hidden="true" />
+                  </IconButton>
                 </form>
               ) : (
                 <>
@@ -86,9 +106,17 @@ export function TasksPanel({ taskList, name }) {
                     <input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} />
                     <span className="task-text">{task.text}</span>
                   </label>
-                  {task.createdBy && <span className="task-owner" title={`Added by ${task.createdBy}`}>{task.createdBy}</span>}
-                  <IconButton size="sm" label={`Edit task: ${task.text}`} onClick={() => startEditing(task)}><Pencil size={14} aria-hidden="true" /></IconButton>
-                  <IconButton size="sm" label={`Delete task: ${task.text}`} onClick={() => removeTask(task.id)}><Trash2 size={14} aria-hidden="true" /></IconButton>
+                  {task.createdBy && (
+                    <span className="task-owner" title={`Added by ${task.createdBy}`}>
+                      {task.createdBy}
+                    </span>
+                  )}
+                  <IconButton size="sm" label={`Edit task: ${task.text}`} onClick={() => startEditing(task)}>
+                    <Pencil size={14} aria-hidden="true" />
+                  </IconButton>
+                  <IconButton size="sm" label={`Delete task: ${task.text}`} onClick={() => removeTask(task.id)}>
+                    <Trash2 size={14} aria-hidden="true" />
+                  </IconButton>
                 </>
               )}
             </li>

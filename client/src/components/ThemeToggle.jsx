@@ -13,7 +13,11 @@ export function ThemeToggle({ preference, setPreference }) {
   const { icon: Icon, label } = DETAILS[preference] ?? DETAILS.system;
   const next = ORDER[(ORDER.indexOf(preference) + 1) % ORDER.length];
   return (
-    <IconButton label={`${label}. Switch to ${DETAILS[next].label.replace('Theme: ', '')}`} title={label} onClick={() => setPreference(next)}>
+    <IconButton
+      label={`${label}. Switch to ${DETAILS[next].label.replace('Theme: ', '')}`}
+      title={label}
+      onClick={() => setPreference(next)}
+    >
       <Icon size={18} aria-hidden="true" />
     </IconButton>
   );

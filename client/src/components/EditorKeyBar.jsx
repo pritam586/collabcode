@@ -21,10 +21,26 @@ export function EditorKeyBar({ editor }) {
 
   return (
     <div className="key-bar" role="group" aria-label="Code symbols" onPointerDown={keepFocus}>
-      <button type="button" className="key-bar-key" aria-label="Undo my last change" onClick={() => press((instance) => instance.getAction('collabcode.undo')?.run())}><Undo2 size={16} aria-hidden="true" /></button>
-      <button type="button" className="key-bar-key" aria-label="Redo my last change" onClick={() => press((instance) => instance.getAction('collabcode.redo')?.run())}><Redo2 size={16} aria-hidden="true" /></button>
+      <button
+        type="button"
+        className="key-bar-key"
+        aria-label="Undo my last change"
+        onClick={() => press((instance) => instance.getAction('collabcode.undo')?.run())}
+      >
+        <Undo2 size={16} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className="key-bar-key"
+        aria-label="Redo my last change"
+        onClick={() => press((instance) => instance.getAction('collabcode.redo')?.run())}
+      >
+        <Redo2 size={16} aria-hidden="true" />
+      </button>
       {KEYS.map(({ label, name, run }) => (
-        <button key={label} type="button" className="key-bar-key" aria-label={name} onClick={() => press(run)}>{label}</button>
+        <button key={label} type="button" className="key-bar-key" aria-label={name} onClick={() => press(run)}>
+          {label}
+        </button>
       ))}
     </div>
   );

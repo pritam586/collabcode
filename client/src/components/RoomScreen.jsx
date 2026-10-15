@@ -10,7 +10,13 @@ export function RoomScreen({ roomId, initialName, navigate, themeControls }) {
   const [name, setName] = useState(initialName || null);
 
   if (!ROOM_ID_PATTERN.test(roomId)) {
-    return <StatusPage title="That link does not look right" message="Room codes use letters, numbers, dots, dashes and underscores. Check the invite link, or start a new room." onAction={() => navigate('/')} />;
+    return (
+      <StatusPage
+        title="That link does not look right"
+        message="Room codes use letters, numbers, dots, dashes and underscores. Check the invite link, or start a new room."
+        onAction={() => navigate('/')}
+      />
+    );
   }
   if (!name) {
     return (
@@ -20,7 +26,15 @@ export function RoomScreen({ roomId, initialName, navigate, themeControls }) {
       </>
     );
   }
-  return <RoomSession key={`${roomId}:${name}`} roomId={roomId} name={name} navigate={navigate} themeControls={themeControls} />;
+  return (
+    <RoomSession
+      key={`${roomId}:${name}`}
+      roomId={roomId}
+      name={name}
+      navigate={navigate}
+      themeControls={themeControls}
+    />
+  );
 }
 
 function RoomSession({ roomId, name, navigate, themeControls }) {

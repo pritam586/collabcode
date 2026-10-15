@@ -9,7 +9,8 @@ function readBlock(selector) {
   const start = css.indexOf(`${selector} {`);
   const end = css.indexOf('}', start);
   const tokens = {};
-  for (const [, name, value] of css.slice(start, end).matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})\b/gi)) tokens[name] = value;
+  for (const [, name, value] of css.slice(start, end).matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})\b/gi))
+    tokens[name] = value;
   return tokens;
 }
 
@@ -38,11 +39,20 @@ const pairs = [
   ['color-border-strong', 'color-surface', UI],
   ['color-border-strong', 'color-surface-sunken', UI],
   ['color-accent', 'color-surface', UI],
-  ...['violet', 'cyan', 'amber', 'rose', 'lime', 'sky'].map((color) => ['color-on-presence', `presence-${color}`, TEXT]),
-].map(([foreground, background, minimum]) => [foreground, background.startsWith('color-') || background.startsWith('presence-') ? background : `color-${background}`, minimum]);
+  ...['violet', 'cyan', 'amber', 'rose', 'lime', 'sky'].map((color) => [
+    'color-on-presence',
+    `presence-${color}`,
+    TEXT,
+  ]),
+].map(([foreground, background, minimum]) => [
+  foreground,
+  background.startsWith('color-') || background.startsWith('presence-') ? background : `color-${background}`,
+  minimum,
+]);
 
 function luminance(hex) {
-  const [r, g, b] = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255)
+  const [r, g, b] = [1, 3, 5]
+    .map((index) => parseInt(hex.slice(index, index + 2), 16) / 255)
     .map((channel) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
@@ -59,10 +69,14 @@ for (const [theme, tokens] of Object.entries(themes)) {
     const ok = value >= minimum;
     if (!ok) failures += 1;
     if (!ok || process.argv.includes('--verbose')) {
-      console.log(`${ok ? 'ok  ' : 'FAIL'} ${theme.padEnd(5)} ${foreground} on ${background}: ${value.toFixed(2)} (needs ${minimum})`);
+      console.log(
+        `${ok ? 'ok  ' : 'FAIL'} ${theme.padEnd(5)} ${foreground} on ${background}: ${value.toFixed(2)} (needs ${minimum})`,
+      );
     }
   }
 }
 
-console.log(failures === 0 ? `All ${pairs.length * 2} color pairs meet WCAG AA.` : `${failures} color pair(s) fail WCAG AA.`);
+console.log(
+  failures === 0 ? `All ${pairs.length * 2} color pairs meet WCAG AA.` : `${failures} color pair(s) fail WCAG AA.`,
+);
 process.exit(failures === 0 ? 0 : 1);

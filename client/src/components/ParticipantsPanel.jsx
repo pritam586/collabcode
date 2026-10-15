@@ -3,10 +3,15 @@ import { Avatar } from './ui/Avatar.jsx';
 import { Button } from './ui/Button.jsx';
 
 export function ParticipantsPanel({ participants, selfSocketId, typingSocketIds, onInvite }) {
-  const sorted = [...participants].sort((a, b) => (a.socketId === selfSocketId ? -1 : b.socketId === selfSocketId ? 1 : 0));
+  const sorted = [...participants].sort((a, b) =>
+    a.socketId === selfSocketId ? -1 : b.socketId === selfSocketId ? 1 : 0,
+  );
   return (
     <div className="panel">
-      <ul className="people-list" aria-label={`${participants.length} ${participants.length === 1 ? 'person' : 'people'} in this room`}>
+      <ul
+        className="people-list"
+        aria-label={`${participants.length} ${participants.length === 1 ? 'person' : 'people'} in this room`}
+      >
         {sorted.map((person) => {
           const isSelf = person.socketId === selfSocketId;
           const isTyping = typingSocketIds.has(person.socketId);
@@ -19,11 +24,19 @@ export function ParticipantsPanel({ participants, selfSocketId, typingSocketIds,
               </span>
               {isTyping ? (
                 <span className="typing-indicator" title={`${person.name} is typing`}>
-                  <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
+                  <span className="typing-dots" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
                   <span className="sr-only">typing</span>
                 </span>
               ) : (
-                <span className={`presence-cursor presence-${person.color}`} title={`${person.name}'s cursor color`} aria-hidden="true" />
+                <span
+                  className={`presence-cursor presence-${person.color}`}
+                  title={`${person.name}'s cursor color`}
+                  aria-hidden="true"
+                />
               )}
             </li>
           );
@@ -36,7 +49,9 @@ export function ParticipantsPanel({ participants, selfSocketId, typingSocketIds,
         </div>
       )}
       <div className="panel-footer">
-        <Button variant="secondary" block icon={<UserPlus size={16} aria-hidden="true" />} onClick={onInvite}>Copy invite link</Button>
+        <Button variant="secondary" block icon={<UserPlus size={16} aria-hidden="true" />} onClick={onInvite}>
+          Copy invite link
+        </Button>
       </div>
     </div>
   );

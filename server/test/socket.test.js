@@ -131,7 +131,10 @@ describe('socket events', () => {
     outsiderDoc.getText('content').insert(0, 'intrusion');
     const outsider = client();
     await outsider.waitFor('connect');
-    outsider.socket.emit('yjs-sync', { roomId: 'private-test', data: encodeUpdateMessage(Y.encodeStateAsUpdate(outsiderDoc)) });
+    outsider.socket.emit('yjs-sync', {
+      roomId: 'private-test',
+      data: encodeUpdateMessage(Y.encodeStateAsUpdate(outsiderDoc)),
+    });
     await pause(150);
     assert.equal(member.text.toString(), '');
   });
@@ -202,7 +205,10 @@ describe('socket events', () => {
 
   test('rejects WebSocket connections from foreign origins', async () => {
     const socket = connect(server.url, {
-      transports: ['websocket'], forceNew: true, reconnection: false, extraHeaders: { Origin: 'https://evil.example.com' },
+      transports: ['websocket'],
+      forceNew: true,
+      reconnection: false,
+      extraHeaders: { Origin: 'https://evil.example.com' },
     });
     try {
       await waitFor(socket, 'connect_error');
@@ -254,7 +260,7 @@ test('room content survives a server restart', async () => {
   }
 });
 
-test("a client restores the room when the server has lost it", async () => {
+test('a client restores the room when the server has lost it', async () => {
   const first = await startTestServer();
   const ada = new YjsTestClient(first.url);
   await ada.join('lost', 'Ada');
@@ -313,7 +319,12 @@ describe('chat', () => {
 
     const toAda = ada.waitFor('chat-message');
     const toGrace = grace.waitFor('chat-message');
-    ada.socket.emit('chat-send', { roomId: 'chat-room', body: '  hello 👋  ', clientId: 'local-1', author: { name: 'Mallory' } });
+    ada.socket.emit('chat-send', {
+      roomId: 'chat-room',
+      body: '  hello 👋  ',
+      clientId: 'local-1',
+      author: { name: 'Mallory' },
+    });
     const [own, received] = await Promise.all([toAda, toGrace]);
     assert.equal(received.body, 'hello 👋');
     assert.equal(received.author.name, 'Ada');
@@ -333,7 +344,10 @@ describe('chat', () => {
 
     const grace = client();
     const snapshot = await grace.join('history-room', 'Grace');
-    assert.deepEqual(snapshot.messages.map((message) => message.body), ['first', 'second']);
+    assert.deepEqual(
+      snapshot.messages.map((message) => message.body),
+      ['first', 'second'],
+    );
   });
 
   test('rejects empty, oversized and control-character messages with chat-error', async () => {
@@ -350,9 +364,12 @@ describe('chat', () => {
     const ada = client();
     await ada.join('spam-room', 'Ada');
     let delivered = 0;
-    ada.socket.on('chat-message', () => { delivered += 1; });
+    ada.socket.on('chat-message', () => {
+      delivered += 1;
+    });
     const error = ada.waitFor('chat-error');
-    for (let index = 0; index < 11; index += 1) ada.socket.emit('chat-send', { roomId: 'spam-room', body: `message ${index}` });
+    for (let index = 0; index < 11; index += 1)
+      ada.socket.emit('chat-send', { roomId: 'spam-room', body: `message ${index}` });
     assert.match((await error).message, /too quickly/);
     await ada.until(() => delivered === 10);
   });
@@ -384,7 +401,10 @@ test('chat history survives a server restart', async () => {
     const second = await startTestServer({ env });
     const grace = new YjsTestClient(second.url);
     const snapshot = await grace.join('durable-chat', 'Grace');
-    assert.deepEqual(snapshot.messages.map((message) => [message.author.name, message.body]), [['Ada', 'still here?']]);
+    assert.deepEqual(
+      snapshot.messages.map((message) => [message.author.name, message.body]),
+      [['Ada', 'still here?']],
+    );
     grace.close();
     await second.close();
   } finally {

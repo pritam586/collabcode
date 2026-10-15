@@ -22,10 +22,17 @@ export class ErrorBoundary extends Component {
       <main className="fallback-page">
         <div className="fallback-card">
           <h1>Something went wrong</h1>
-          <p>CollabCode hit an unexpected problem. Your shared code is saved on the server, so reloading the page is safe.</p>
+          <p>
+            CollabCode hit an unexpected problem. Your shared code is saved on the server, so reloading the page is
+            safe.
+          </p>
           <div className="fallback-actions">
-            <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>Reload page</button>
-            <a className="btn btn-secondary" href="/">Go to the home page</a>
+            <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+              Reload page
+            </button>
+            <a className="btn btn-secondary" href="/">
+              Go to the home page
+            </a>
           </div>
         </div>
       </main>

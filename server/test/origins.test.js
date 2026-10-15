@@ -3,7 +3,10 @@ import test from 'node:test';
 import { createOriginMatcher } from '../src/config/origins.js';
 
 test('accepts every origin in a comma-separated CLIENT_ORIGIN list', () => {
-  const isAllowed = createOriginMatcher({ clientOrigin: 'https://app.example.com, https://staging.example.com/', nodeEnv: 'production' });
+  const isAllowed = createOriginMatcher({
+    clientOrigin: 'https://app.example.com, https://staging.example.com/',
+    nodeEnv: 'production',
+  });
   assert.equal(isAllowed('https://app.example.com'), true);
   assert.equal(isAllowed('https://staging.example.com'), true);
   assert.equal(isAllowed('https://evil.example.com'), false);

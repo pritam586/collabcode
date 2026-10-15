@@ -17,10 +17,10 @@ includes a `Retry-After` header in seconds.
 
 Liveness and readiness check. Not rate limited and not request-logged.
 
-| Status | Body |
-| --- | --- |
-| 200 | `{ "status": "ok", "uptimeSeconds": 42, "checks": { "database": "ok", "rooms": { "openRooms": 1, "participants": 2, "unsavedRooms": 0 } } }` |
-| 503 | Same shape with `"status": "degraded"` and the failing check set to `"unavailable"` |
+| Status | Body                                                                                                                                         |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 200    | `{ "status": "ok", "uptimeSeconds": 42, "checks": { "database": "ok", "rooms": { "openRooms": 1, "participants": 2, "unsavedRooms": 0 } } }` |
+| 503    | Same shape with `"status": "degraded"` and the failing check set to `"unavailable"`                                                          |
 
 ### `POST /api/run`
 
@@ -34,14 +34,14 @@ Request body:
 { "language": "java" | "cpp" | "python" | "typescript", "code": "string, 1-25000 characters" }
 ```
 
-| Status | Meaning |
-| --- | --- |
-| 200 | `{ "stdout": string, "stderr": string, "exitCode": number }`. Output is truncated to 16,000 characters per stream. A non-zero `exitCode` means the program failed, not the request. |
-| 400 | Invalid body: unsupported language, empty or oversized code, or malformed JSON |
-| 408 | The program ran longer than 120 seconds |
-| 413 | Request body larger than 110 KB |
-| 429 | Rate limit reached |
-| 503 | Runner disabled (`CODE_RUNNER_ENABLED=false`), Docker Desktop not running, or the runner container could not start |
+| Status | Meaning                                                                                                                                                                             |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 200    | `{ "stdout": string, "stderr": string, "exitCode": number }`. Output is truncated to 16,000 characters per stream. A non-zero `exitCode` means the program failed, not the request. |
+| 400    | Invalid body: unsupported language, empty or oversized code, or malformed JSON                                                                                                      |
+| 408    | The program ran longer than 120 seconds                                                                                                                                             |
+| 413    | Request body larger than 110 KB                                                                                                                                                     |
+| 429    | Rate limit reached                                                                                                                                                                  |
+| 503    | Runner disabled (`CODE_RUNNER_ENABLED=false`), Docker Desktop not running, or the runner container could not start                                                                  |
 
 ## Socket.io
 
@@ -61,7 +61,12 @@ while offline, so there are no version numbers, acknowledgements or resyncs to h
 
 ```ts
 type Participant = { socketId: string; name: string; color: 'violet' | 'cyan' | 'amber' | 'rose' | 'lime' | 'sky' };
-type ChatMessage = { id: number; author: { name: string; color: string; socketId?: string }; body: string; createdAt: number }; // createdAt: epoch ms
+type ChatMessage = {
+  id: number;
+  author: { name: string; color: string; socketId?: string };
+  body: string;
+  createdAt: number;
+}; // createdAt: epoch ms
 type Snapshot = { version: number; language: string; participants: Participant[]; messages: ChatMessage[] }; // version counts applied updates; messages are the latest 50
 ```
 
@@ -80,30 +85,30 @@ After a reconnect the client repeats all four steps with the document it already
 
 ### Client → server
 
-| Event | Payload | Server reply |
-| --- | --- | --- |
-| `join-room` | `{ roomId, name }`: `roomId` is 1–64 letters, digits, `.`, `_`, `-` and starts with a letter or digit. `name` is 1–32 characters with no control or bidi-override characters. | `room-sync` and `yjs-sync` (step 1) to the sender, `participant-joined` to the others, or `room-error` |
-| `leave-room` | none | `participant-left` and an awareness removal to the others |
-| `yjs-sync` | `{ roomId, data }`: sync step 1, step 2 or update | Step 1: `yjs-sync` (step 2) and `yjs-awareness`. Step 2 or update: relayed to the others. If the change would make the text longer than 100,000 characters, contains a carriage return, or is malformed or too large: `document-error` with `reset: true`. |
-| `yjs-awareness` | `{ roomId, data }`: an awareness update for the sender's own client id | Relayed to the others. The server keeps only `cursor` (Yjs relative positions `{ anchor, head }`) and `typing`, and sets `user` to the server's record `{ socketId, name, color }`. Updates for client ids first used by another socket are ignored. |
-| `language-change` | `{ roomId, language }`: one of `javascript`, `typescript`, `java`, `cpp`, `python`, `json`, `css`, `html`, `markdown` | `language-changed` to the others |
-| `chat-send` | `{ roomId, body, clientId? }`: `body` is 1–1,000 characters after trimming, with no control characters except newline and tab. `clientId` (up to 64 characters) is echoed back so the sender can match its pending copy. Limit: 10 messages per 10 seconds per connection. | `chat-message` to everyone in the room, including the sender, or `chat-error` to the sender |
+| Event             | Payload                                                                                                                                                                                                                                                                    | Server reply                                                                                                                                                                                                                                               |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `join-room`       | `{ roomId, name }`: `roomId` is 1–64 letters, digits, `.`, `_`, `-` and starts with a letter or digit. `name` is 1–32 characters with no control or bidi-override characters.                                                                                              | `room-sync` and `yjs-sync` (step 1) to the sender, `participant-joined` to the others, or `room-error`                                                                                                                                                     |
+| `leave-room`      | none                                                                                                                                                                                                                                                                       | `participant-left` and an awareness removal to the others                                                                                                                                                                                                  |
+| `yjs-sync`        | `{ roomId, data }`: sync step 1, step 2 or update                                                                                                                                                                                                                          | Step 1: `yjs-sync` (step 2) and `yjs-awareness`. Step 2 or update: relayed to the others. If the change would make the text longer than 100,000 characters, contains a carriage return, or is malformed or too large: `document-error` with `reset: true`. |
+| `yjs-awareness`   | `{ roomId, data }`: an awareness update for the sender's own client id                                                                                                                                                                                                     | Relayed to the others. The server keeps only `cursor` (Yjs relative positions `{ anchor, head }`) and `typing`, and sets `user` to the server's record `{ socketId, name, color }`. Updates for client ids first used by another socket are ignored.       |
+| `language-change` | `{ roomId, language }`: one of `javascript`, `typescript`, `java`, `cpp`, `python`, `json`, `css`, `html`, `markdown`                                                                                                                                                      | `language-changed` to the others                                                                                                                                                                                                                           |
+| `chat-send`       | `{ roomId, body, clientId? }`: `body` is 1–1,000 characters after trimming, with no control characters except newline and tab. `clientId` (up to 64 characters) is echoed back so the sender can match its pending copy. Limit: 10 messages per 10 seconds per connection. | `chat-message` to everyone in the room, including the sender, or `chat-error` to the sender                                                                                                                                                                |
 
 ### Server → client
 
-| Event | Payload | When |
-| --- | --- | --- |
-| `room-sync` | `{ roomId } & Snapshot` | After a successful `join-room` |
-| `room-error` | `{ message }` | Invalid join payload, or the room already has `MAX_PARTICIPANTS_PER_ROOM` people |
-| `participant-joined` | `Participant` | Someone else joined your room |
-| `participant-left` | `{ socketId }` | Someone left or disconnected |
-| `yjs-sync` | `{ roomId, data }` | Sync handshake messages and other people's updates |
-| `yjs-awareness` | `{ roomId, data }` | Other people's cursors and typing state changed |
-| `document-error` | `{ message, reset: true }` | Your change was refused. It is already applied in your editor and Yjs changes cannot be taken back, so discard your local document and sync a fresh one. |
-| `language-changed` | `{ language }` | Someone changed the room's language |
-| `chat-message` | `ChatMessage & { clientId? }` | A message was posted. The author and time are set by the server. |
-| `chat-error` | `{ message, clientId? }` | Your message was refused (invalid, too fast, or not stored) |
-| `server-error` | `{ message }` | A handler failed unexpectedly, or you are sending events too quickly. If a document update was dropped, the server restarts the sync handshake once the rate-limit window resets. |
+| Event                | Payload                       | When                                                                                                                                                                              |
+| -------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `room-sync`          | `{ roomId } & Snapshot`       | After a successful `join-room`                                                                                                                                                    |
+| `room-error`         | `{ message }`                 | Invalid join payload, or the room already has `MAX_PARTICIPANTS_PER_ROOM` people                                                                                                  |
+| `participant-joined` | `Participant`                 | Someone else joined your room                                                                                                                                                     |
+| `participant-left`   | `{ socketId }`                | Someone left or disconnected                                                                                                                                                      |
+| `yjs-sync`           | `{ roomId, data }`            | Sync handshake messages and other people's updates                                                                                                                                |
+| `yjs-awareness`      | `{ roomId, data }`            | Other people's cursors and typing state changed                                                                                                                                   |
+| `document-error`     | `{ message, reset: true }`    | Your change was refused. It is already applied in your editor and Yjs changes cannot be taken back, so discard your local document and sync a fresh one.                          |
+| `language-changed`   | `{ language }`                | Someone changed the room's language                                                                                                                                               |
+| `chat-message`       | `ChatMessage & { clientId? }` | A message was posted. The author and time are set by the server.                                                                                                                  |
+| `chat-error`         | `{ message, clientId? }`      | Your message was refused (invalid, too fast, or not stored)                                                                                                                       |
+| `server-error`       | `{ message }`                 | A handler failed unexpectedly, or you are sending events too quickly. If a document update was dropped, the server restarts the sync handshake once the rate-limit window resets. |
 
 Each connection may send 200 events and 4 MB of Yjs data per 5 seconds.
 

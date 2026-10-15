@@ -23,7 +23,9 @@ export function Tabs({ tabs, selectedId, onSelect, label }) {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            ref={(element) => { tabRefs.current[tab.id] = element; }}
+            ref={(element) => {
+              tabRefs.current[tab.id] = element;
+            }}
             type="button"
             role="tab"
             className="tab"

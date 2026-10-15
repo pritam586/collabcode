@@ -45,8 +45,14 @@ export function Modal({ open, title, onClose, children, dismissible = true, init
   return (
     <dialog ref={dialogRef} className="modal" aria-labelledby={titleId} onCancel={handleCancel}>
       <div className="modal-header">
-        <h2 className="modal-title" id={titleId}>{title}</h2>
-        {dismissible && <IconButton label="Close" size="sm" onClick={onClose}><X size={18} aria-hidden="true" /></IconButton>}
+        <h2 className="modal-title" id={titleId}>
+          {title}
+        </h2>
+        {dismissible && (
+          <IconButton label="Close" size="sm" onClick={onClose}>
+            <X size={18} aria-hidden="true" />
+          </IconButton>
+        )}
       </div>
       <div className="modal-body">{children}</div>
     </dialog>

@@ -18,7 +18,12 @@ const envSchema = z.object({
   EMPTY_ROOM_TTL_MINUTES: optional(z.coerce.number().int().min(1).default(30)),
   ROOM_RETENTION_DAYS: optional(z.coerce.number().int().min(1).default(30)),
   // Only the literal "false" disables the runner, matching the original behaviour.
-  CODE_RUNNER_ENABLED: optional(z.string().default('true').transform((value) => value.trim().toLowerCase() !== 'false')),
+  CODE_RUNNER_ENABLED: optional(
+    z
+      .string()
+      .default('true')
+      .transform((value) => value.trim().toLowerCase() !== 'false'),
+  ),
   DOCKER_BIN: optional(z.string().default('docker')),
   JAVA_RUNNER_IMAGE: optional(z.string().default('eclipse-temurin:21-jdk-alpine')),
   CPP_RUNNER_IMAGE: optional(z.string().default('gcc:14.2.0')),

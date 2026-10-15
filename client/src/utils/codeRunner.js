@@ -10,7 +10,9 @@ export async function runCompiledCode(language, code) {
     });
   } catch {
     // fetch only rejects for network-level failures (server down, offline, blocked by CORS).
-    throw new Error('Could not reach the CollabCode server to run this code. Check that the server is running and try again.');
+    throw new Error(
+      'Could not reach the CollabCode server to run this code. Check that the server is running and try again.',
+    );
   }
 
   const result = await response.json().catch(() => ({ error: 'The runner returned an invalid response.' }));

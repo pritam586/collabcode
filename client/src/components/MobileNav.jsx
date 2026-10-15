@@ -21,7 +21,9 @@ export function MobileNav({ items, selectedId, onSelect }) {
         {items.map(({ id, label, icon: Icon, controls, badge }) => (
           <button
             key={id}
-            ref={(element) => { buttonRefs.current[id] = element; }}
+            ref={(element) => {
+              buttonRefs.current[id] = element;
+            }}
             type="button"
             role="tab"
             className="mobile-nav-item"
@@ -33,7 +35,11 @@ export function MobileNav({ items, selectedId, onSelect }) {
           >
             <span className="mobile-nav-icon">
               <Icon size={20} aria-hidden="true" />
-              {badge?.count > 0 && <span className={`badge ${badge.accent ? 'badge-accent' : ''} mobile-nav-badge`} aria-hidden="true">{badge.count}</span>}
+              {badge?.count > 0 && (
+                <span className={`badge ${badge.accent ? 'badge-accent' : ''} mobile-nav-badge`} aria-hidden="true">
+                  {badge.count}
+                </span>
+              )}
             </span>
             <span className="mobile-nav-label">{label}</span>
             {badge?.count > 0 && <span className="sr-only">, {badge.label}</span>}

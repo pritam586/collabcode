@@ -14,7 +14,9 @@ export function createRoomRepository(db) {
       updated_at = excluded.updated_at,
       last_active_at = excluded.last_active_at
   `);
-  const purgeStatement = db.prepare('DELETE FROM rooms WHERE last_active_at < ? AND id NOT IN (SELECT value FROM json_each(?))');
+  const purgeStatement = db.prepare(
+    'DELETE FROM rooms WHERE last_active_at < ? AND id NOT IN (SELECT value FROM json_each(?))',
+  );
   const countStatement = db.prepare('SELECT COUNT(*) AS count FROM rooms');
 
   return {

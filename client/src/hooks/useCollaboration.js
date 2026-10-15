@@ -35,12 +35,18 @@ export function useTasks(provider) {
 
   useEffect(() => {
     if (!yTasks) return undefined;
-    const update = () => setTasks(yTasks.toArray().map((task) => ({
-      id: task.get('id'),
-      text: task.get('text'),
-      done: Boolean(task.get('done')),
-      createdBy: task.get('createdBy'),
-    })).filter((task) => typeof task.id === 'string' && typeof task.text === 'string'));
+    const update = () =>
+      setTasks(
+        yTasks
+          .toArray()
+          .map((task) => ({
+            id: task.get('id'),
+            text: task.get('text'),
+            done: Boolean(task.get('done')),
+            createdBy: task.get('createdBy'),
+          }))
+          .filter((task) => typeof task.id === 'string' && typeof task.text === 'string'),
+      );
     update();
     yTasks.observeDeep(update);
     return () => yTasks.unobserveDeep(update);
@@ -48,35 +54,47 @@ export function useTasks(provider) {
 
   const findTask = useCallback((id) => yTasks?.toArray().find((task) => task.get('id') === id), [yTasks]);
 
-  const addTask = useCallback((text, createdBy) => {
-    const value = text.trim().slice(0, MAX_TASK_LENGTH);
-    if (!yTasks || !value || yTasks.length >= MAX_TASKS) return false;
-    const task = new Y.Map();
-    yTasks.doc.transact(() => {
-      task.set('id', createId());
-      task.set('text', value);
-      task.set('done', false);
-      task.set('createdBy', createdBy);
-      yTasks.push([task]);
-    });
-    return true;
-  }, [yTasks]);
+  const addTask = useCallback(
+    (text, createdBy) => {
+      const value = text.trim().slice(0, MAX_TASK_LENGTH);
+      if (!yTasks || !value || yTasks.length >= MAX_TASKS) return false;
+      const task = new Y.Map();
+      yTasks.doc.transact(() => {
+        task.set('id', createId());
+        task.set('text', value);
+        task.set('done', false);
+        task.set('createdBy', createdBy);
+        yTasks.push([task]);
+      });
+      return true;
+    },
+    [yTasks],
+  );
 
-  const toggleTask = useCallback((id) => {
-    const task = findTask(id);
-    task?.set('done', !task.get('done'));
-  }, [findTask]);
+  const toggleTask = useCallback(
+    (id) => {
+      const task = findTask(id);
+      task?.set('done', !task.get('done'));
+    },
+    [findTask],
+  );
 
-  const renameTask = useCallback((id, text) => {
-    const value = text.trim().slice(0, MAX_TASK_LENGTH);
-    if (value) findTask(id)?.set('text', value);
-  }, [findTask]);
+  const renameTask = useCallback(
+    (id, text) => {
+      const value = text.trim().slice(0, MAX_TASK_LENGTH);
+      if (value) findTask(id)?.set('text', value);
+    },
+    [findTask],
+  );
 
-  const removeTask = useCallback((id) => {
-    if (!yTasks) return;
-    const index = yTasks.toArray().findIndex((task) => task.get('id') === id);
-    if (index >= 0) yTasks.delete(index, 1);
-  }, [yTasks]);
+  const removeTask = useCallback(
+    (id) => {
+      if (!yTasks) return;
+      const index = yTasks.toArray().findIndex((task) => task.get('id') === id);
+      if (index >= 0) yTasks.delete(index, 1);
+    },
+    [yTasks],
+  );
 
   return { tasks, addTask, toggleTask, renameTask, removeTask };
 }

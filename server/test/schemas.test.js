@@ -38,7 +38,11 @@ test('Yjs messages must be non-empty binary under the size limit', () => {
 
 test('awareness states keep only the cursor and typing fields', () => {
   const position = { type: { client: 1, clock: 2 }, tname: null, item: null, assoc: 0 };
-  const parsed = awarenessStateSchema.parse({ cursor: { anchor: position, head: position }, typing: true, user: { name: 'Spoofed' } });
+  const parsed = awarenessStateSchema.parse({
+    cursor: { anchor: position, head: position },
+    typing: true,
+    user: { name: 'Spoofed' },
+  });
   assert.deepEqual(parsed, { cursor: { anchor: position, head: position }, typing: true });
   assert.equal(awarenessStateSchema.safeParse({ cursor: { anchor: 'x', head: position } }).success, false);
 });

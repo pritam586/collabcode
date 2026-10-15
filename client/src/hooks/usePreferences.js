@@ -26,7 +26,9 @@ export function useTheme() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0d1018' : '#f5f6fa');
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#0d1018' : '#f5f6fa');
   }, [theme]);
 
   const setPreference = useCallback((next) => {
@@ -48,7 +50,9 @@ export function useFontSize() {
 }
 
 function clampFontSize(value) {
-  return Number.isFinite(value) ? Math.min(FONT_SIZES.max, Math.max(FONT_SIZES.min, Math.round(value))) : FONT_SIZES.default;
+  return Number.isFinite(value)
+    ? Math.min(FONT_SIZES.max, Math.max(FONT_SIZES.min, Math.round(value)))
+    : FONT_SIZES.default;
 }
 
 export function readSavedName() {
