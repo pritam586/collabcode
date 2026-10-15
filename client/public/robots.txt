@@ -1,0 +1,4 @@
+# Room links (/r/<code>) work like private invites, so keep them out of search results.
+User-agent: *
+Allow: /
+Disallow: /r/
