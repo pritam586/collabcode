@@ -15,6 +15,27 @@ The interface is built from design tokens (`client/src/styles/tokens.css`) and a
 
 Room links are paths like `/r/<code>`, so a production web server must serve `index.html` for them (Vite's dev and preview servers already do).
 
+### Phones, tablets and desktops
+
+- **Phones (under 768 px):** one view at a time (Code, Output, Chat, Tasks, People), picked from a bottom tab bar. Secondary tools live in the header's "More" menu.
+- **Tablets (768–1023 px):** the desktop layout, with the sidebar as a drawer over the editor.
+- **Desktops (1024 px and up):** the sidebar sits next to the editor.
+
+On touch screens every control is at least 44 px, the editor wraps long lines and defaults to 16 px text, and a symbol bar above the keyboard types Tab, brackets and other characters that phone keyboards hide.
+
+### Performance
+
+Monaco is bundled with the app (no CDN) and loads only when a room opens. The home page needs about 55 kB of gzipped JavaScript. To audit a production build with Lighthouse:
+
+```powershell
+cd client
+npm run build
+npm run preview -- --port 4173
+npx lighthouse@13.5.0 http://localhost:4173/ --view
+```
+
+The last audit (mobile, throttled) scored 100 for performance, accessibility, best practices and SEO on the home page. Room links score lower for SEO on purpose: `robots.txt` keeps them out of search engines.
+
 ## Requirements
 
 - Node.js 22.13 or newer (the server uses the built-in `node:sqlite` module)
