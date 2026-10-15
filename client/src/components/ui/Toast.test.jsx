@@ -42,6 +42,8 @@ test('toasts dismiss themselves, or with their close button', async () => {
 
   await user.click(screen.getByRole('button', { name: 'show info' }));
   await user.click(screen.getByRole('button', { name: 'Dismiss notification' }));
+  // It slides out before it is removed.
+  act(() => vi.advanceTimersByTime(300));
   expect(screen.queryByText('Heads up')).not.toBeInTheDocument();
   vi.useRealTimers();
 });

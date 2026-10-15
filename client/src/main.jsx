@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import { ToastProvider } from './components/ui/Toast.jsx';
+import { TooltipLayer } from './components/ui/TooltipLayer.jsx';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
 import './styles/tokens.css';
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <ToastProvider>
         <App />
+        <TooltipLayer />
       </ToastProvider>
     </ErrorBoundary>
   </StrictMode>,

@@ -41,7 +41,7 @@ export function Popover({ label, icon, children, align = 'end', buttonProps = {}
         type="button"
         className="icon-btn"
         aria-label={label}
-        title={label}
+        data-tooltip={label}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}

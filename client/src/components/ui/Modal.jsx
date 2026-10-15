@@ -4,7 +4,7 @@ import { IconButton } from './Button.jsx';
 
 // A modal built on the native <dialog> element, which traps focus, closes on Escape and makes
 // the rest of the page inert. Focus returns to whatever was focused before it opened.
-export function Modal({ open, title, onClose, children, dismissible = true, initialFocusRef }) {
+export function Modal({ open, title, onClose, children, dismissible = true, initialFocusRef, wide = false }) {
   const dialogRef = useRef(null);
   const titleId = useId();
 
@@ -43,7 +43,12 @@ export function Modal({ open, title, onClose, children, dismissible = true, init
 
   if (!open) return null;
   return (
-    <dialog ref={dialogRef} className="modal" aria-labelledby={titleId} onCancel={handleCancel}>
+    <dialog
+      ref={dialogRef}
+      className={wide ? 'modal modal-wide' : 'modal'}
+      aria-labelledby={titleId}
+      onCancel={handleCancel}
+    >
       <div className="modal-header">
         <h2 className="modal-title" id={titleId}>
           {title}
