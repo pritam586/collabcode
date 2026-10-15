@@ -299,6 +299,7 @@ const RUNNER_WORKER_SOURCE = `
       send('done');
     }
   };
+  postMessage({ type: 'ready' });
 `;
 
 function createRunnerDocument(code) {
@@ -313,28 +314,34 @@ function createRunnerDocument(code) {
     const workerUrl = URL.createObjectURL(new Blob([${safelyEncodedWorker}], { type: 'text/javascript' }));
     const worker = new Worker(workerUrl);
     let completed = false;
+    let runTimeout = null;
     const closeWorker = () => {
       if (completed) return;
       completed = true;
-      clearTimeout(timeout);
+      clearTimeout(startTimeout);
+      clearTimeout(runTimeout);
       worker.terminate();
       URL.revokeObjectURL(workerUrl);
     };
     const relay = (payload) => parent.postMessage({ source, ...payload }, '*');
-    const timeout = setTimeout(() => {
-      relay({ type: 'error', text: 'Execution stopped after 3 seconds.' });
+    const stop = (text) => {
+      relay({ type: 'error', text });
       relay({ type: 'done' });
       closeWorker();
-    }, 3000);
+    };
+    // The 3-second limit covers the user's code only. Starting a worker can take longer on a
+    // slow or busy device, so it gets its own, more generous limit.
+    const startTimeout = setTimeout(() => stop('The JavaScript runner did not start. Try running again.'), 15000);
     worker.onmessage = ({ data }) => {
+      if (data.type === 'ready') {
+        clearTimeout(startTimeout);
+        runTimeout = setTimeout(() => stop('Execution stopped after 3 seconds.'), 3000);
+        worker.postMessage({ code: ${safelyEncodedCode} });
+        return;
+      }
       relay(data);
       if (data.type === 'done') closeWorker();
     };
-    worker.onerror = (event) => {
-      relay({ type: 'error', text: event.message || 'The JavaScript runner failed.' });
-      relay({ type: 'done' });
-      closeWorker();
-    };
-    worker.postMessage({ code: ${safelyEncodedCode} });
+    worker.onerror = (event) => stop(event.message || 'The JavaScript runner failed.');
   </script></body></html>`;
 }
