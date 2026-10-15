@@ -1,7 +1,7 @@
 import { Ellipsis, Keyboard, Link2, LogOut, Minus, Monitor, Moon, PanelRight, Play, Plus, SquareTerminal, Sun } from 'lucide-react';
 import { Avatar } from './ui/Avatar.jsx';
 import { Button, IconButton } from './ui/Button.jsx';
-import { MOD_KEY } from './ui/Kbd.jsx';
+import { MOD_KEY } from '../lib/platform.js';
 import { Popover } from './ui/Popover.jsx';
 import { Select } from './ui/Select.jsx';
 import { ThemeToggle } from './ThemeToggle.jsx';

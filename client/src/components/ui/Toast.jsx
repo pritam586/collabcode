@@ -1,8 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import { IconButton } from './Button.jsx';
+import { ToastContext } from './useToast.js';
 
-const ToastContext = createContext(null);
 const ICONS = { success: CircleCheck, error: CircleAlert, warning: TriangleAlert, info: Info };
 const DURATIONS = { success: 3500, info: 4500, warning: 7000, error: 8000 };
 
@@ -65,10 +65,4 @@ export function ToastProvider({ children }) {
       </div>
     </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) throw new Error('useToast must be used inside <ToastProvider>.');
-  return context;
 }

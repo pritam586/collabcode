@@ -19,6 +19,7 @@ export const displayNameSchema = z.string()
   .normalize('NFC')
   .min(1)
   .max(MAX_DISPLAY_NAME_LENGTH)
+  // eslint-disable-next-line no-control-regex -- matching control characters is the point.
   .regex(/^[^\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]+$/);
 
 export const joinRoomSchema = z.object({ roomId: roomIdSchema, name: displayNameSchema });
@@ -58,6 +59,7 @@ export const chatSendSchema = z.object({
     .normalize('NFC')
     .min(1, CHAT_MESSAGE_ERROR)
     .max(MAX_CHAT_MESSAGE_LENGTH, CHAT_MESSAGE_ERROR)
+    // eslint-disable-next-line no-control-regex -- matching control characters is the point.
     .refine((body) => !/[\x00-\x08\x0B-\x1F\x7F\u202A-\u202E\u2066-\u2069]/.test(body), 'Messages cannot contain control characters.'),
   // Lets the sender match the broadcast copy to the message it is showing as "sending".
   clientId: z.string().max(64).optional(),

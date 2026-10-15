@@ -23,19 +23,27 @@ export function Modal({ open, title, onClose, children, dismissible = true, init
     return undefined;
   }, [open, initialFocusRef]);
 
+  // A click on the backdrop lands on the <dialog> element itself. This is a pointer
+  // convenience only; keyboard users close with Escape or the Close button.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!open || !dialog || !dismissible) return undefined;
+    const handleClick = (event) => {
+      if (event.target === dialog) onClose?.();
+    };
+    dialog.addEventListener('click', handleClick);
+    return () => dialog.removeEventListener('click', handleClick);
+  }, [open, dismissible, onClose]);
+
   function handleCancel(event) {
     // Escape key. Non-dismissible dialogs (like the name prompt) must be answered.
     event.preventDefault();
     if (dismissible) onClose?.();
   }
 
-  function handleBackdropClick(event) {
-    if (dismissible && event.target === dialogRef.current) onClose?.();
-  }
-
   if (!open) return null;
   return (
-    <dialog ref={dialogRef} className="modal" aria-labelledby={titleId} onCancel={handleCancel} onClick={handleBackdropClick}>
+    <dialog ref={dialogRef} className="modal" aria-labelledby={titleId} onCancel={handleCancel}>
       <div className="modal-header">
         <h2 className="modal-title" id={titleId}>{title}</h2>
         {dismissible && <IconButton label="Close" size="sm" onClick={onClose}><X size={18} aria-hidden="true" /></IconButton>}

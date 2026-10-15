@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Editor from '@monaco-editor/react';
 import '../editor/monacoSetup.js';
 import { bindMonacoToYText } from '../collab/monacoBinding.js';
 import { bindRemoteCursors } from '../collab/remoteCursors.js';
 import { EditorKeyBar } from './EditorKeyBar.jsx';
-import { MOD_KEY } from './ui/Kbd.jsx';
+import { MOD_KEY } from '../lib/platform.js';
 import { TOUCH_QUERY, useMediaQuery } from '../hooks/useMediaQuery.js';
 import { runCompiledCode } from '../utils/codeRunner.js';
 
@@ -20,7 +20,8 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
   const resizeCleanupRef = useRef(null);
   const paneRef = useRef(null);
   const [editor, setEditor] = useState(null);
-  const [isSynced, setIsSynced] = useState(provider.synced);
+  const subscribeToSync = useCallback((onChange) => provider.on('synced', onChange), [provider]);
+  const isSynced = useSyncExternalStore(subscribeToSync, () => provider.synced);
   const [runnerSource, setRunnerSource] = useState('');
   const [runnerKey, setRunnerKey] = useState(0);
   const [runOutput, setRunOutput] = useState([]);
@@ -28,6 +29,21 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
 
   const appendRunOutput = useCallback((type, text) => {
     setRunOutput((current) => [...current, { type, text }].slice(-60));
+  }, []);
+
+  const runNativeCode = useCallback(async (language, code) => {
+    const languageLabel = language === 'cpp' ? 'C++' : language === 'python' ? 'Python' : language === 'typescript' ? 'TypeScript' : 'Java';
+    setRunOutput([{ type: 'muted', text: `Running ${languageLabel} in an isolated container...` }]);
+    try {
+      const result = await runCompiledCode(language, code);
+      const output = [
+        ...(result.stdout ? [{ type: 'log', text: result.stdout }] : []),
+        ...(result.stderr ? [{ type: 'error', text: result.stderr }] : []),
+      ];
+      setRunOutput(output.length > 0 ? output : [{ type: 'muted', text: 'Program completed with no output.' }]);
+    } catch (error) {
+      setRunOutput([{ type: 'error', text: error.message || 'The native code runner failed.' }]);
+    }
   }, []);
 
   const runCurrentCode = useCallback(() => {
@@ -51,22 +67,7 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
     setRunOutput([{ type: 'muted', text: 'Running JavaScript in an isolated browser sandbox…' }]);
     setRunnerSource(createRunnerDocument(code));
     setRunnerKey((current) => current + 1);
-  }, [onOutputVisibilityChange, room.language]);
-
-  async function runNativeCode(language, code) {
-    const languageLabel = language === 'cpp' ? 'C++' : language === 'python' ? 'Python' : language === 'typescript' ? 'TypeScript' : 'Java';
-    setRunOutput([{ type: 'muted', text: `Running ${languageLabel} in an isolated container...` }]);
-    try {
-      const result = await runCompiledCode(language, code);
-      const output = [
-        ...(result.stdout ? [{ type: 'log', text: result.stdout }] : []),
-        ...(result.stderr ? [{ type: 'error', text: result.stderr }] : []),
-      ];
-      setRunOutput(output.length > 0 ? output : [{ type: 'muted', text: 'Program completed with no output.' }]);
-    } catch (error) {
-      setRunOutput([{ type: 'error', text: error.message || 'The native code runner failed.' }]);
-    }
-  }
+  }, [onOutputVisibilityChange, room.language, runNativeCode]);
 
   useEffect(() => {
     if (runRequest <= lastRunRequestRef.current) return;
@@ -86,10 +87,6 @@ export function EditorPane({ room, provider, runRequest, view = 'split', isOutpu
     return () => window.removeEventListener('message', receiveRunnerMessage);
   }, [appendRunOutput]);
 
-  useEffect(() => {
-    setIsSynced(provider.synced);
-    return provider.on('synced', () => setIsSynced(true));
-  }, [provider]);
 
   useEffect(() => {
     if (!editor || !monacoRef.current) return undefined;
@@ -265,5 +262,5 @@ function createRunnerDocument(code) {
       closeWorker();
     };
     worker.postMessage({ code: ${safelyEncodedCode} });
-  <\/script></body></html>`;
+  </script></body></html>`;
 }

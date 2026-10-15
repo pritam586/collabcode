@@ -10,7 +10,7 @@ import { Sidebar } from './Sidebar.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { TasksPanel } from './TasksPanel.jsx';
 import { WorkspaceHeader } from './WorkspaceHeader.jsx';
-import { useToast } from './ui/Toast.jsx';
+import { useToast } from './ui/useToast.js';
 import { usePresence, useTasks } from '../hooks/useCollaboration.js';
 import { COMPACT_QUERY, useMediaQuery } from '../hooks/useMediaQuery.js';
 import { useFontSize } from '../hooks/usePreferences.js';
@@ -63,9 +63,9 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
   // Chat counts as read while it is on screen.
   const chatVisible = compact ? mobileView === 'chat' : sidebarOpen && sidebarTab === 'chat';
   const latestMessageId = session.messages.at(-1)?.id ?? 0;
-  useEffect(() => {
-    if (chatVisible) setLastSeenMessageId(latestMessageId);
-  }, [chatVisible, latestMessageId]);
+  // Adjusting state during render (not in an effect) avoids a second render pass:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (chatVisible && lastSeenMessageId !== latestMessageId) setLastSeenMessageId(latestMessageId);
   const unreadCount = chatVisible ? 0 : session.messages.filter((message) => message.id > lastSeenMessageId && message.author?.socketId !== session.selfSocketId).length;
 
   const share = useCallback(async () => {

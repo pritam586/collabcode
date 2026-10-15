@@ -6,7 +6,7 @@ import { useRoute } from './hooks/useRoute.js';
 
 // The room screen (sockets, Yjs and, inside it, the Monaco editor) is code-split, so the home
 // page only downloads what it shows. LandingPage preloads it when someone heads for a room.
-export const loadRoomScreen = () => import('./components/RoomScreen.jsx');
+const loadRoomScreen = () => import('./components/RoomScreen.jsx');
 const RoomScreen = lazy(() => loadRoomScreen().then((module) => ({ default: module.RoomScreen })));
 
 export default function App() {

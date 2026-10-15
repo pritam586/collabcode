@@ -19,7 +19,7 @@ export function Tabs({ tabs, selectedId, onSelect, label }) {
 
   return (
     <div className="tabs">
-      <div className="tab-list" role="tablist" aria-label={label} onKeyDown={handleKeyDown}>
+      <div className="tab-list" role="tablist" aria-label={label}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -32,6 +32,7 @@ export function Tabs({ tabs, selectedId, onSelect, label }) {
             aria-controls={`${baseId}-panel-${tab.id}`}
             tabIndex={tab.id === selectedId ? 0 : -1}
             onClick={() => onSelect(tab.id)}
+            onKeyDown={handleKeyDown}
           >
             {tab.icon}
             {tab.label}

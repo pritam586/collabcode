@@ -17,7 +17,7 @@ export function MobileNav({ items, selectedId, onSelect }) {
 
   return (
     <nav className="mobile-nav" aria-label="Room views" data-tour="sidebar">
-      <div role="tablist" aria-label="Room views" className="mobile-nav-list" onKeyDown={handleKeyDown}>
+      <div role="tablist" aria-label="Room views" className="mobile-nav-list">
         {items.map(({ id, label, icon: Icon, controls, badge }) => (
           <button
             key={id}
@@ -29,6 +29,7 @@ export function MobileNav({ items, selectedId, onSelect }) {
             aria-controls={controls}
             tabIndex={id === selectedId ? 0 : -1}
             onClick={() => onSelect(id)}
+            onKeyDown={handleKeyDown}
           >
             <span className="mobile-nav-icon">
               <Icon size={20} aria-hidden="true" />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, ListChecks, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { IconButton } from './ui/Button.jsx';
 import { MAX_TASK_LENGTH, MAX_TASKS } from '../hooks/useCollaboration.js';
@@ -8,6 +8,12 @@ export function TasksPanel({ taskList, name }) {
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
+  const editInputRef = useRef(null);
+
+  // Clicking "Edit" swaps the row for a text field; move focus into it so typing works at once.
+  useEffect(() => {
+    if (editingId) editInputRef.current?.focus();
+  }, [editingId]);
   const doneCount = tasks.filter((task) => task.done).length;
   const atLimit = tasks.length >= MAX_TASKS;
 
@@ -67,7 +73,7 @@ export function TasksPanel({ taskList, name }) {
                     className="input"
                     value={editText}
                     maxLength={MAX_TASK_LENGTH}
-                    autoFocus
+                    ref={editInputRef}
                     onChange={(event) => setEditText(event.target.value)}
                     onKeyDown={(event) => { if (event.key === 'Escape') finishEditing(false); }}
                   />

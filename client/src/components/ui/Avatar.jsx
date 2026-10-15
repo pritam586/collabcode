@@ -1,6 +1,6 @@
 const COLORS = new Set(['violet', 'cyan', 'amber', 'rose', 'lime', 'sky']);
 
-export function initials(name = '') {
+function initials(name = '') {
   return name.trim().split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 

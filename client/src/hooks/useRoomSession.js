@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SocketYjsProvider } from '../collab/SocketYjsProvider.js';
-import { useToast } from '../components/ui/Toast.jsx';
+import { useToast } from '../components/ui/useToast.js';
 import { createId } from '../lib/storage.js';
 import { socket } from '../socket.js';
 
