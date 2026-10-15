@@ -1,0 +1,64 @@
+# Rendered by the nginx image at start-up: ${COLLABCODE_*} values come from the environment.
+
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  '' close;
+}
+
+server {
+  listen 8080;
+  server_name _;
+  root /usr/share/nginx/html;
+  server_tokens off;
+
+  gzip on;
+  gzip_vary on;
+  gzip_comp_level 6;
+  gzip_min_length 1024;
+  gzip_types text/css application/javascript application/json image/svg+xml text/plain;
+
+  # Hashed build output never changes, so browsers may cache it for a year.
+  location /assets/ {
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    try_files $uri =404;
+  }
+
+  # Everything else is the single-page app. Unknown paths such as /r/<room> get index.html.
+  # index.html carries a fresh CSP nonce on every request, so it must never be cached.
+  location / {
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Cache-Control "no-store" always;
+    sub_filter_once off;
+    sub_filter_types text/html;
+    sub_filter '__CSP_NONCE__' $request_id;
+    try_files $uri /index.html;
+  }
+
+  location /api/ {
+    proxy_pass http://${COLLABCODE_SERVER_UPSTREAM};
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    # Code runs can take up to two minutes.
+    proxy_read_timeout 130s;
+    client_max_body_size 128k;
+  }
+
+  location = /health {
+    proxy_pass http://${COLLABCODE_SERVER_UPSTREAM};
+  }
+
+  location /socket.io/ {
+    proxy_pass http://${COLLABCODE_SERVER_UPSTREAM};
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    # Keep idle collaboration sockets open (Socket.io pings every 25 seconds).
+    proxy_read_timeout 1h;
+    proxy_send_timeout 1h;
+  }
+}

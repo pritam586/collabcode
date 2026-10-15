@@ -1,0 +1,46 @@
+# Run CollabCode with one command:  docker compose up --build
+# Then open http://localhost:8080 (or WEB_PORT).
+#
+# The browser only talks to `web` (nginx), which serves the app and proxies the API and
+# WebSocket to `server`. The server is not published on the host.
+#
+# The Docker code runner (Java, C++, Python, TypeScript) is off here because it needs the
+# host's Docker socket. See docker-compose.runner.yml to opt in. JavaScript always runs,
+# in the browser.
+
+name: collabcode
+
+services:
+  server:
+    build: ./server
+    init: true
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # The public address people open, so the server accepts their WebSocket connections.
+      CLIENT_ORIGIN: ${PUBLIC_URL:-http://localhost:8080}
+      # nginx sits in front, so trust one proxy hop for client IPs (rate limits).
+      TRUST_PROXY: '1'
+      CODE_RUNNER_ENABLED: 'false'
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MAX_PARTICIPANTS_PER_ROOM: ${MAX_PARTICIPANTS_PER_ROOM:-10}
+      ROOM_RETENTION_DAYS: ${ROOM_RETENTION_DAYS:-30}
+    volumes:
+      - collabcode-data:/app/data
+    # Allow time to save every room on shutdown.
+    stop_grace_period: 15s
+
+  web:
+    build:
+      context: ./client
+      args:
+        VITE_SERVER_URL: same-origin
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-8080}:8080'
+    depends_on:
+      server:
+        condition: service_healthy
+
+volumes:
+  collabcode-data:

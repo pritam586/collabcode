@@ -1,0 +1,28 @@
+# Opt-in: enable the Docker code runner (Java, C++, Python, TypeScript) inside Compose.
+#
+#   mkdir -p /tmp/collabcode-runs && chmod 1777 /tmp/collabcode-runs
+#   DOCKER_GID=$(stat -c %g /var/run/docker.sock) \
+#     docker compose -f docker-compose.yml -f docker-compose.runner.yml up --build
+#
+# SECURITY: mounting the Docker socket lets the server container control the host's Docker
+# daemon, which is equivalent to root on the host. Each run still happens in a locked-down
+# container (no network, 256 MB, 1 CPU, read-only file system, no capabilities), but only
+# enable this on a machine dedicated to CollabCode.
+#
+# The runner bind-mounts each program into a sibling container, and the host's Docker
+# daemon resolves that path on the host. So the work directory is mounted at the same path
+# on both sides.
+
+services:
+  server:
+    build:
+      args:
+        WITH_DOCKER_CLI: 'true'
+    environment:
+      CODE_RUNNER_ENABLED: 'true'
+      RUNNER_WORK_DIR: /tmp/collabcode-runs
+    group_add:
+      - '${DOCKER_GID:-999}'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/collabcode-runs:/tmp/collabcode-runs
