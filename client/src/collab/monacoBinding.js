@@ -1,8 +1,8 @@
 import * as Y from 'yjs';
 
 // Keeps a Monaco model and a Y.Text identical in both directions, the same approach as the
-// y-monaco package. It is written here because y-monaco imports its own copy of
-// monaco-editor, while the app loads Monaco through @monaco-editor/react.
+// y-monaco package. It is written here because y-monaco imports the full monaco-editor entry
+// (every language), while the app bundles only the languages it offers (editor/monacoSetup.js).
 //
 // Undo and redo go through a Y.UndoManager that only tracks this editor's own edits, so
 // Ctrl+Z never reverts something a collaborator typed.

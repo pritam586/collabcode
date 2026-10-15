@@ -15,7 +15,7 @@ const FEATURES = [
   { icon: Code2, title: 'No sign-up', text: 'Pick a name and share a link. That is the whole setup.' },
 ];
 
-export function LandingPage({ navigate, themeControls }) {
+export function LandingPage({ navigate, themeControls, onPrepareRoom }) {
   const [name, setName] = useState(() => readSavedName() || randomGuestName());
   const [joinCode, setJoinCode] = useState('');
   const [nameError, setNameError] = useState('');
@@ -71,13 +71,13 @@ export function LandingPage({ navigate, themeControls }) {
             error={nameError}
             onChange={(event) => { setName(event.target.value); setNameError(''); }}
           />
-          <Button variant="primary" size="lg" block icon={<ArrowRight size={18} aria-hidden="true" />} onClick={createRoom}>
+          <Button variant="primary" size="lg" block icon={<ArrowRight size={18} aria-hidden="true" />} onClick={createRoom} onPointerEnter={onPrepareRoom} onFocus={onPrepareRoom}>
             Create a room
           </Button>
 
           <div className="divider" role="separator"><span>or join one</span></div>
 
-          <form className="join-form" onSubmit={joinRoom} noValidate>
+          <form className="join-form" onSubmit={joinRoom} onFocus={onPrepareRoom} noValidate>
             <TextField
               label="Room code or invite link"
               placeholder="swift-otter-4821"

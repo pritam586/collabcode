@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
+import '../editor/monacoSetup.js';
 import { bindMonacoToYText } from '../collab/monacoBinding.js';
 import { bindRemoteCursors } from '../collab/remoteCursors.js';
 import { MOD_KEY } from './ui/Kbd.jsx';
