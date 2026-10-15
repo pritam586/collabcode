@@ -7,6 +7,9 @@ const ICONS = { success: CircleCheck, error: CircleAlert, warning: TriangleAlert
 const DURATIONS = { success: 3500, info: 4500, warning: 7000, error: 8000 };
 // How long a dismissed toast takes to slide out (matches the toast-out animation).
 const EXIT_MS = 200;
+// Where the Popover API is missing, the region stays an ordinary fixed element (a `popover`
+// attribute it cannot open would hide it).
+const SUPPORTS_POPOVER = typeof HTMLElement !== 'undefined' && 'showPopover' in HTMLElement.prototype;
 
 // Toasts announce through two live regions: errors are assertive (role="alert"), the rest
 // polite. Hovering or focusing a toast pauses its timer so it can be read.
@@ -100,7 +103,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="toast-region" popover="manual" ref={regionRef}>
+      <div className="toast-region" popover={SUPPORTS_POPOVER ? 'manual' : undefined} ref={regionRef}>
         <div role="alert">{toasts.filter((toast) => toast.type === 'error').map(renderToast)}</div>
         <div role="status" aria-live="polite">
           {toasts.filter((toast) => toast.type !== 'error').map(renderToast)}
