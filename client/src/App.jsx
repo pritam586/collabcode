@@ -8,6 +8,8 @@ import { useRoute } from './hooks/useRoute.js';
 // page only downloads what it shows. LandingPage preloads it when someone heads for a room.
 const loadRoomScreen = () => import('./components/RoomScreen.jsx');
 const RoomScreen = lazy(() => loadRoomScreen().then((module) => ({ default: module.RoomScreen })));
+// Development only: the UI kit gallery at /__kit. Production builds drop it entirely.
+const KitPreview = import.meta.env.DEV ? lazy(() => import('./dev/KitPreview.jsx')) : null;
 
 export default function App() {
   const { route, navigate, state } = useRoute();
@@ -23,6 +25,13 @@ export default function App() {
           navigate={navigate}
           themeControls={themeControls}
         />
+      </Suspense>
+    );
+  }
+  if (KitPreview && window.location.pathname === '/__kit') {
+    return (
+      <Suspense fallback={null}>
+        <KitPreview themeControls={themeControls} />
       </Suspense>
     );
   }
