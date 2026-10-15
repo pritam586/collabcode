@@ -25,6 +25,9 @@ const envSchema = z.object({
       .transform((value) => value.trim().toLowerCase() !== 'false'),
   ),
   DOCKER_BIN: optional(z.string().default('docker')),
+  // Where code is written before it is mounted into the runner container. When the server
+  // itself runs in Docker, this must be a host directory mounted at the same path.
+  RUNNER_WORK_DIR: optional(z.string().optional()),
   JAVA_RUNNER_IMAGE: optional(z.string().default('eclipse-temurin:21-jdk-alpine')),
   CPP_RUNNER_IMAGE: optional(z.string().default('gcc:14.2.0')),
   PYTHON_RUNNER_IMAGE: optional(z.string().default('python:3.12-alpine')),
@@ -59,6 +62,7 @@ export function loadConfig(env = process.env) {
     runner: {
       enabled: values.CODE_RUNNER_ENABLED,
       dockerBin: values.DOCKER_BIN,
+      workDir: values.RUNNER_WORK_DIR,
       images: {
         java: values.JAVA_RUNNER_IMAGE,
         cpp: values.CPP_RUNNER_IMAGE,

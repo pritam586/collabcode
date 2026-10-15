@@ -1,4 +1,4 @@
-const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:4000';
+import { SERVER_URL as serverUrl } from '../lib/serverUrl.js';
 
 export async function runCompiledCode(language, code) {
   let response;

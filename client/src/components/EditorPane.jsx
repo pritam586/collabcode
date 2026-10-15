@@ -304,7 +304,11 @@ const RUNNER_WORKER_SOURCE = `
 function createRunnerDocument(code) {
   const safelyEncodedCode = JSON.stringify(code).replace(/</g, '\\u003c');
   const safelyEncodedWorker = JSON.stringify(RUNNER_WORKER_SOURCE).replace(/</g, '\\u003c');
-  return `<!doctype html><html><body><script>
+  // The sandboxed frame inherits the page's Content-Security-Policy, so its inline script
+  // needs the page's nonce (set per request by nginx in production; absent in development).
+  const nonce = document.querySelector('script[nonce]')?.nonce;
+  const nonceAttribute = nonce && /^[A-Za-z0-9+/=_-]+$/.test(nonce) ? ` nonce="${nonce}"` : '';
+  return `<!doctype html><html><body><script${nonceAttribute}>
     const source = 'collabcode-runner';
     const workerUrl = URL.createObjectURL(new Blob([${safelyEncodedWorker}], { type: 'text/javascript' }));
     const worker = new Worker(workerUrl);

@@ -38,7 +38,7 @@ export function getSupportedRunLanguages() {
   return new Set(Object.keys(runnerTemplates));
 }
 
-export function createCodeRunner({ enabled = true, dockerBin = 'docker', images = {} } = {}) {
+export function createCodeRunner({ enabled = true, dockerBin = 'docker', images = {}, workDir = tmpdir() } = {}) {
   return async function runCompiledCode(language, code) {
     if (!enabled) {
       throw new CodeRunnerError('The code runner is disabled on this server.', 503);
@@ -50,7 +50,7 @@ export function createCodeRunner({ enabled = true, dockerBin = 'docker', images 
     }
 
     const runner = resolveRunner(language, code, images[language]);
-    const workingDirectory = await mkdtemp(join(tmpdir(), 'collabcode-run-'));
+    const workingDirectory = await mkdtemp(join(workDir ?? tmpdir(), 'collabcode-run-'));
     try {
       await writeFile(join(workingDirectory, runner.filename), code, { encoding: 'utf8', mode: 0o600 });
       return await runInDocker(dockerBin, workingDirectory, runner);

@@ -14,7 +14,8 @@
       content="CollabCode is a real-time collaborative code editor with live cursors, chat, shared tasks and a sandboxed code runner. No sign-up needed."
     />
     <title>CollabCode: code together in real time</title>
-    <script>
+    <!-- nginx replaces __CSP_NONCE__ with a per-request nonce allowed by its Content-Security-Policy. -->
+    <script nonce="__CSP_NONCE__">
       // Apply the saved or system theme before the first paint, so the page never flashes the wrong colors.
       (function () {
         var preference = 'system';
