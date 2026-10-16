@@ -14,6 +14,7 @@ A real-time collaborative code editor. Create a room, share the link, and edit t
 
 - [Features](#features)
 - [Tech stack](#tech-stack)
+- [Design system](#design-system)
 - [Architecture](#architecture)
 - [Quick start with Docker](#quick-start-with-docker)
 - [Local development](#local-development)
@@ -56,9 +57,12 @@ A real-time collaborative code editor. Create a room, share the link, and edit t
 
 **Interface**
 
-- Light, dark or system theme, with your choice saved.
+- Light, dark or system theme, with your choice saved and a cross-fade when it changes.
+- A sidebar and output console you can resize by dragging or with the keyboard; their sizes are remembered.
+- A terminal-style console with the run command, colored output, errors with their line and column, and the run's duration.
+- Remote cursors that show each person's name as a flag above the line, shrinking once they go idle.
 - Adjustable font size and keyboard shortcuts (press `?`).
-- Toasts for anything that needs attention, and friendly error pages.
+- Toasts for anything that needs attention, skeleton loading screens, and friendly 404 and error pages.
 - A short first-visit tour.
 - **Responsive:**
   - Phones get a bottom tab bar (Code, Output, Chat, Tasks, People), 44 px touch targets and a symbol bar above the keyboard.
@@ -69,14 +73,84 @@ A real-time collaborative code editor. Create a room, share the link, and edit t
 
 ## Tech stack
 
-| Layer       | Technology                                                                                              |
-| ----------- | ------------------------------------------------------------------------------------------------------- |
-| Client      | React 18, Vite 6, Monaco Editor (bundled, no CDN), Yjs, Socket.io client, lucide-react icons            |
-| Server      | Node.js 22.13+, Express 4, Socket.io 4, Yjs and y-protocols, zod, helmet, pino                          |
-| Storage     | SQLite through Node's built-in `node:sqlite`, with migrations                                           |
-| Code runner | Docker CLI, one locked-down container per run                                                           |
-| Quality     | ESLint 9 (React, Hooks, jsx-a11y), Prettier, Vitest and Testing Library, Node's test runner, Playwright |
-| Delivery    | Docker, nginx (unprivileged), Docker Compose, GitHub Actions                                            |
+| Layer       | Technology                                                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Client      | React 18, Vite 6, Monaco Editor (bundled, no CDN), Yjs, Socket.io client, lucide-react, Inter and JetBrains Mono (self-hosted) |
+| Server      | Node.js 22.13+, Express 4, Socket.io 4, Yjs and y-protocols, zod, helmet, pino                                                 |
+| Storage     | SQLite through Node's built-in `node:sqlite`, with migrations                                                                  |
+| Code runner | Docker CLI, one locked-down container per run                                                                                  |
+| Quality     | ESLint 9 (React, Hooks, jsx-a11y), Prettier, Vitest and Testing Library, Node's test runner, Playwright                        |
+| Delivery    | Docker, nginx (unprivileged), Docker Compose, GitHub Actions                                                                   |
+
+## Design system
+
+CollabCode's look is a calm, deep-navy developer tool with one signature gradient (violet → blue → cyan) used sparingly: the logo, primary buttons, the headline accent, active tab indicators and focus glows. Everything else is neutral. Frosted glass appears only on layers that float over content (the start and join cards, modals, menus, toasts). Dark is the hero theme; the light theme has the same structure.
+
+**Where it lives**
+
+- **`client/src/styles/tokens.css`** is the single source for every color, size, shadow and timing. Components use only these variables, never raw values. `[data-theme='light']` on `<html>` swaps every color token.
+- **`base.css`** holds fonts, focus rings, selection, scrollbars, textures and reduced motion. **`components.css`** styles the UI kit. **`app.css`** and **`landing.css`** lay out the pages.
+- **`client/src/components/ui/`** holds the reusable components.
+- **Gallery:** run `npm run dev` and open `/__kit` to see every component and state, plus the 404, invalid-link, join-failure, loading and crash pages. It exists only in development builds.
+
+### Color
+
+| Token                    | Dark      | Light     | Used for                              |
+| ------------------------ | --------- | --------- | ------------------------------------- |
+| `--color-bg`             | `#080b14` | `#f6f7fb` | Page canvas                           |
+| `--color-surface`        | `#0e1220` | `#ffffff` | Panels, top bar, sidebar              |
+| `--color-surface-raised` | `#151a2c` | `#ffffff` | Cards, chat bubbles, menus            |
+| `--color-surface-sunken` | `#0a0d18` | `#f2f4f9` | Inputs, chips                         |
+| `--color-border`         | `#222941` | `#dadfea` | Hairlines                             |
+| `--color-border-strong`  | `#5d6784` | `#7a8399` | Input borders (3:1 for UI components) |
+| `--color-text`           | `#e9edf7` | `#0e1324` | Body text                             |
+| `--color-text-muted`     | `#98a2bc` | `#535c72` | Secondary text                        |
+| `--color-accent`         | `#a78bfa` | `#6d28d9` | Focus, selected states                |
+| `--color-success`        | `#4ade80` | `#15803d` | Synced, finished runs                 |
+| `--color-danger`         | `#fda4af` | `#be123c` | Errors, destructive actions           |
+| `--color-warning`        | `#fcd34d` | `#92400e` | Reconnecting                          |
+| `--editor-bg`            | `#0b0e1a` | `#fbfcfe` | Code editor and landing mockup        |
+| `--console-bg`           | `#070a13` | `#f4f6fb` | Output console                        |
+
+- **Signature gradient** (`--gradient-brand`): `#8b5cf6` → `#3b82f6` → `#22d3ee`, for decoration only.
+- **Strong gradient** (`--gradient-brand-strong`): `#7c3aed` → `#2563eb` → `#0e7490`, behind white text such as the primary buttons. Every stop is at least 4.5:1 against white.
+- **Participant colors** (`--presence-*`): violet, cyan, amber, rose, lime and sky. Used for avatars, cursors and selections; text on them uses `--color-on-presence`.
+- **Syntax colors** (`--syntax-*`) are shared by the landing mockup and the Monaco themes in `client/src/editor/themes.js`. Monaco needs literal colors, so change both together.
+
+`npm run check:contrast` (in `client/`) checks 108 color pairs in both themes against WCAG AA: text, UI borders, every gradient stop with white, syntax colors and the console. It fails if a pair falls short or a theme block is missing. Add a pair there whenever you add a color.
+
+### Type, space, shape and motion
+
+- **Fonts:** Inter for the interface and JetBrains Mono (with ligatures) for code. Both are self-hosted through `@fontsource-variable`, and an Arial fallback sized to Inter's metrics keeps the layout from shifting when the fonts arrive.
+- **Type scale:** `--text-2xs` to `--text-lg` are fixed. `--text-xl`, `--text-2xl`, `--text-3xl` and `--text-display` are fluid (`clamp`). Headings use tight tracking (`--tracking-tight`, `--tracking-tighter`) and balanced wrapping.
+- **Spacing:** a 4px grid (`--space-1` = 4px through `--space-24` = 96px).
+- **Radius:** 6, 8, 10 (controls), 12, 16 (cards and panels) and 20px (modals and hero cards).
+- **Depth:**
+  - Layered shadows `--shadow-sm`, `--shadow-md` and `--shadow-lg`, plus `--highlight-top`, a faint inner top edge on raised surfaces.
+  - `--shadow-glow` and `--shadow-brand` for gradient elements.
+  - `--glass-bg`, `--glass-border` and `--glass-blur` for frosted layers.
+- **Motion:**
+  - 150, 200 and 300 ms with `--ease-out`.
+  - Hover lifts, press feedback, sliding tab indicators, modal fade and scale, toast slide in and out, staggered list entrances, and scroll-in cards where the browser supports scroll-driven animation.
+  - Switching themes cross-fades the page with the View Transitions API.
+  - Pulses animate only transform and opacity, so they never repaint.
+  - `prefers-reduced-motion` turns all of it off, and the landing mockup then shows its finished state.
+
+### Components
+
+| Component                                    | Notes                                                                                                                     |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `Button`, `IconButton`                       | `primary` (gradient), `secondary`, `ghost`, `danger`; `sm`, `md`, `lg`; `loading`; `tooltip` and `shortcut` props         |
+| `TextField`, `Select`                        | Labels, hints and errors wired to `aria-describedby`; `action` puts a button beside the field; `mono` for codes and links |
+| `Tabs`                                       | WAI-ARIA tabs with arrow, Home and End keys and an indicator that slides to the selected tab                              |
+| `Modal`                                      | Native `<dialog>` (focus trap, Escape, inert page) with a glass panel and a fade-and-scale entrance                       |
+| `Popover`, `Menu`                            | A panel of controls, and a WAI-ARIA menu button with arrows, Home, End, typeahead and checkbox items                      |
+| `TooltipLayer`                               | One shared tooltip for any element with `data-tooltip` (and `data-shortcut`): hover or keyboard focus, Escape, hoverable  |
+| `Toast` / `useToast`                         | Polite and assertive live regions, pause on hover, slide in and out, shown above open dialogs                             |
+| `CopyButton`                                 | Copies, then shows "Copied!" in place without changing width, with a fallback when the clipboard is blocked               |
+| `ResizeHandle`                               | WAI-ARIA window splitter: drag, arrow keys, Home, End, double-click to reset                                              |
+| `Badge`, `Skeleton`, `EmptyState`, `Spinner` | Status pills, shimmering placeholders, inviting empty panels and the gradient loading ring                                |
+| `Avatar`, `AvatarStack`, `Shortcut`          | Initials in participant colors with presence dots, overlapping stacks with "+N", and keyboard keys                        |
 
 ## Architecture
 
@@ -263,10 +337,11 @@ Running more than one server instance needs a shared database and shared documen
 │   ├── src/
 │   │   ├── collab/         Yjs provider, Monaco binding, remote cursors
 │   │   ├── components/     Screens and panels; ui/ holds the design-system components
-│   │   ├── editor/         Bundled Monaco setup
+│   │   ├── dev/            The /__kit gallery (development builds only)
+│   │   ├── editor/         Bundled Monaco setup and the CollabCode editor themes
 │   │   ├── hooks/          Room session, collaboration, preferences, media queries
-│   │   ├── lib/            Room codes, storage, server URL, platform helpers
-│   │   └── styles/         tokens.css, base.css, components.css, app.css
+│   │   ├── lib/            Room codes, clipboard, storage, server URL, platform helpers
+│   │   └── styles/         tokens.css, base.css, components.css, app.css, landing.css
 │   ├── nginx/              Production web server config (CSP, proxy, caching)
 │   └── scripts/            check-contrast.mjs
 ├── server/
