@@ -43,9 +43,11 @@ export default [
       ...reactHooks.configs.recommended.rules,
       ...jsxA11y.flatConfigs.recommended.rules,
       // Scrollable regions (the chat log) must be focusable so keyboard users can scroll them.
+      // A focusable separator is the WAI-ARIA window splitter (ResizeHandle): an interactive
+      // widget the arrow keys move, which the plugin cannot tell from a plain divider.
       'jsx-a11y/no-noninteractive-tabindex': [
         'error',
-        { tags: [], roles: ['tabpanel', 'log'], allowExpressionValues: true },
+        { tags: [], roles: ['tabpanel', 'log', 'separator'], allowExpressionValues: true },
       ],
       // Props are documented by usage and comments; the project does not use PropTypes.
       'react/prop-types': 'off',
