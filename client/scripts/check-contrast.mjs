@@ -39,6 +39,12 @@ const pairs = [
     TEXT,
   ]),
   ['editor-gutter', 'editor-bg', UI],
+  // The output console.
+  ...['color-text', 'color-text-muted', 'color-danger', 'color-success', 'color-accent-text'].map((role) => [
+    role,
+    'console-bg',
+    TEXT,
+  ]),
   // Tooltips invert the page colors.
   ['color-bg', 'color-text', TEXT],
   ['color-info', 'color-surface', TEXT],
@@ -64,7 +70,7 @@ const pairs = [
   ]),
 ].map(([foreground, background, minimum]) => [
   foreground,
-  /^(color|presence|brand|editor)-/.test(background) ? background : `color-${background}`,
+  /^(color|presence|brand|editor|console)-/.test(background) ? background : `color-${background}`,
   minimum,
 ]);
 

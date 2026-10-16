@@ -11,15 +11,21 @@ import { Sidebar } from './Sidebar.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { TasksPanel } from './TasksPanel.jsx';
 import { WorkspaceHeader } from './WorkspaceHeader.jsx';
+import { ResizeHandle } from './ui/ResizeHandle.jsx';
+import { Spinner } from './ui/Spinner.jsx';
 import { useToast } from './ui/useToast.js';
 import { usePresence, useTasks } from '../hooks/useCollaboration.js';
-import { COMPACT_QUERY, useMediaQuery } from '../hooks/useMediaQuery.js';
+import { COMPACT_QUERY, WIDE_QUERY, useMediaQuery } from '../hooks/useMediaQuery.js';
 import { useFontSize } from '../hooks/usePreferences.js';
-import { getFileExtension } from '../constants/languages.js';
+import { getFileName } from '../constants/languages.js';
 import { roomUrl } from '../lib/rooms.js';
 import { readStorage, writeStorage } from '../lib/storage.js';
 
 const SIDEBAR_KEY = 'collabcode-sidebar-open';
+const SIDEBAR_WIDTH_KEY = 'collabcode-sidebar-width';
+const SIDEBAR_WIDTH = { min: 260, default: 320, max: 560 };
+const clampSidebarWidth = (width) =>
+  Number.isFinite(width) ? Math.min(SIDEBAR_WIDTH.max, Math.max(SIDEBAR_WIDTH.min, width)) : SIDEBAR_WIDTH.default;
 // Monaco is the heaviest part of the app; the toolbar, people and chat appear while it loads.
 const EditorPane = lazy(() => import('./EditorPane.jsx').then((module) => ({ default: module.EditorPane })));
 
@@ -30,6 +36,7 @@ const EditorPane = lazy(() => import('./EditorPane.jsx').then((module) => ({ def
 export function Workspace({ roomId, name, session, navigate, themeControls }) {
   const toast = useToast();
   const compact = useMediaQuery(COMPACT_QUERY);
+  const wide = useMediaQuery(WIDE_QUERY);
   const [fontSize, setFontSize] = useFontSize();
   const [runRequest, setRunRequest] = useState(0);
   const [isOutputOpen, setIsOutputOpen] = useState(false);
@@ -38,6 +45,14 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
   const isWide = () => window.innerWidth >= 1024;
   const [sidebarOpen, setSidebarOpenState] = useState(() => isWide() && readStorage(SIDEBAR_KEY, true));
   const [sidebarTab, setSidebarTab] = useState('people');
+  // On wide screens the sidebar sits beside the editor and can be resized; the width is kept.
+  const [sidebarWidth, setSidebarWidthState] = useState(() =>
+    clampSidebarWidth(readStorage(SIDEBAR_WIDTH_KEY, SIDEBAR_WIDTH.default)),
+  );
+  const setSidebarWidth = useCallback((width) => {
+    setSidebarWidthState(width);
+    writeStorage(SIDEBAR_WIDTH_KEY, width);
+  }, []);
   const [mobileView, setMobileView] = useState('code');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -125,7 +140,8 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
           participants={session.participants}
           selfSocketId={session.selfSocketId}
           typingSocketIds={typingSocketIds}
-          onInvite={share}
+          inviteUrl={roomUrl(roomId)}
+          onInviteBlocked={() => setShareOpen(true)}
         />
       ),
     },
@@ -196,8 +212,10 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
           hidden={!editorVisible}
         >
           <div className="file-tab">
-            <span className={`file-dot file-dot-${session.language}`} aria-hidden="true" /> untitled.
-            {getFileExtension(session.language)}
+            <span className="file-tab-name">
+              <span className={`file-dot file-dot-${session.language}`} aria-hidden="true" />
+              {getFileName(session.language)}
+            </span>
           </div>
           <Suspense fallback={<EditorFallback />}>
             <EditorPane
@@ -235,12 +253,28 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
               </section>
             ))
           : sidebarOpen && (
-              <Sidebar
-                sections={sections}
-                selectedTab={sidebarTab}
-                onSelectTab={setSidebarTab}
-                onClose={() => setSidebarOpen(false)}
-              />
+              <>
+                {wide && (
+                  <ResizeHandle
+                    label="Resize sidebar"
+                    value={sidebarWidth}
+                    min={SIDEBAR_WIDTH.min}
+                    max={SIDEBAR_WIDTH.max}
+                    invert
+                    controls="workspace-sidebar"
+                    onChange={setSidebarWidth}
+                    onReset={() => setSidebarWidth(SIDEBAR_WIDTH.default)}
+                    className="sidebar-resizer"
+                  />
+                )}
+                <Sidebar
+                  sections={sections}
+                  selectedTab={sidebarTab}
+                  onSelectTab={setSidebarTab}
+                  onClose={() => setSidebarOpen(false)}
+                  width={wide ? sidebarWidth : undefined}
+                />
+              </>
             )}
       </div>
 
@@ -287,7 +321,7 @@ function EditorFallback() {
             ))}
           </div>
           <p>
-            <span className="spinner" aria-hidden="true" /> Loading the editor…
+            <Spinner /> Loading the editor…
           </p>
         </div>
       </div>

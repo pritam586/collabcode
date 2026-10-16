@@ -4,7 +4,7 @@ import { Tabs } from './ui/Tabs.jsx';
 
 // Desktop and tablet sidebar. `sections` comes from Workspace (useRoomSections), which also
 // feeds the phone layout's bottom tabs, so both show the same panels and badges.
-export function Sidebar({ sections, selectedTab, onSelectTab, onClose }) {
+export function Sidebar({ sections, selectedTab, onSelectTab, onClose, width }) {
   const tabs = sections.map(({ id, label, icon: Icon, badge, content }) => ({
     id,
     label,
@@ -14,7 +14,12 @@ export function Sidebar({ sections, selectedTab, onSelectTab, onClose }) {
   }));
 
   return (
-    <aside className="sidebar" id="workspace-sidebar" aria-label="People, chat and tasks">
+    <aside
+      className="sidebar"
+      id="workspace-sidebar"
+      aria-label="People, chat and tasks"
+      style={width ? { '--sidebar-width': `${width}px` } : undefined}
+    >
       <div className="sidebar-close">
         <IconButton label="Close sidebar" size="sm" onClick={onClose}>
           <X size={16} aria-hidden="true" />

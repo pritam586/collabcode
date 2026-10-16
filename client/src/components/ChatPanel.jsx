@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MessageSquare, RotateCw, SendHorizontal, X } from 'lucide-react';
 import { Avatar } from './ui/Avatar.jsx';
 import { IconButton } from './ui/Button.jsx';
+import { EmptyState } from './ui/Feedback.jsx';
 
 const MAX_LENGTH = 1000;
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -59,11 +60,9 @@ export function ChatPanel({ messages, pendingMessages, selfSocketId, onSend, onD
         tabIndex={0}
       >
         {isEmpty && (
-          <div className="empty-state">
-            <MessageSquare size={28} aria-hidden="true" />
-            <strong>No messages yet</strong>
-            <p>Say hello, or ask about a line of code. Messages stay with the room.</p>
-          </div>
+          <EmptyState icon={MessageSquare} title="No messages yet">
+            Say hello, or ask about a line of code. Messages stay with the room for anyone who joins later.
+          </EmptyState>
         )}
         {messages.map((message, index) => {
           const previous = messages[index - 1];
@@ -73,7 +72,10 @@ export function ChatPanel({ messages, pendingMessages, selfSocketId, onSend, onD
             message.createdAt - previous.createdAt < GROUP_WINDOW_MS;
           const isSelf = message.author?.socketId === selfSocketId;
           return (
-            <article key={message.id} className={`chat-message ${grouped ? 'is-grouped' : ''}`}>
+            <article
+              key={message.id}
+              className={['chat-message', grouped && 'is-grouped', isSelf && 'is-self'].filter(Boolean).join(' ')}
+            >
               {!grouped && (
                 <header className="chat-meta">
                   <Avatar name={message.author?.name} color={message.author?.color} size="sm" />
@@ -83,7 +85,7 @@ export function ChatPanel({ messages, pendingMessages, selfSocketId, onSend, onD
                   </span>
                   <time
                     dateTime={new Date(message.createdAt).toISOString()}
-                    title={dateTimeFormat.format(message.createdAt)}
+                    data-tooltip={dateTimeFormat.format(message.createdAt)}
                   >
                     {timeFormat.format(message.createdAt)}
                   </time>
@@ -96,7 +98,7 @@ export function ChatPanel({ messages, pendingMessages, selfSocketId, onSend, onD
         {pendingMessages.map((message) => (
           <article
             key={message.clientId}
-            className={`chat-message is-pending ${message.status === 'failed' ? 'is-failed' : ''}`}
+            className={`chat-message is-self is-grouped is-pending ${message.status === 'failed' ? 'is-failed' : ''}`}
           >
             <p className="chat-body">{message.body}</p>
             <p className="chat-status">
@@ -143,7 +145,13 @@ export function ChatPanel({ messages, pendingMessages, selfSocketId, onSend, onD
           onKeyDown={handleKeyDown}
           aria-describedby="chat-hint"
         />
-        <IconButton type="submit" label="Send message" className="chat-send" disabled={!draft.trim()}>
+        <IconButton
+          type="submit"
+          label="Send message"
+          shortcut="Enter"
+          className={draft.trim() ? 'chat-send is-ready' : 'chat-send'}
+          disabled={!draft.trim()}
+        >
           <SendHorizontal size={18} aria-hidden="true" />
         </IconButton>
         <p className="chat-hint" id="chat-hint">

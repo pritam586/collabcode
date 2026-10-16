@@ -1,16 +1,24 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Editor from '@monaco-editor/react';
+import { CircleCheck, CircleX, Eraser, SquareTerminal, X } from 'lucide-react';
 import '../editor/monacoSetup.js';
+import { EDITOR_THEMES } from '../editor/themes.js';
 import { bindMonacoToYText } from '../collab/monacoBinding.js';
 import { bindRemoteCursors } from '../collab/remoteCursors.js';
 import { EditorKeyBar } from './EditorKeyBar.jsx';
+import { Button, IconButton } from './ui/Button.jsx';
+import { Badge } from './ui/Feedback.jsx';
+import { ResizeHandle } from './ui/ResizeHandle.jsx';
+import { Spinner } from './ui/Spinner.jsx';
+import { LANGUAGES, getRunCommand } from '../constants/languages.js';
+import { readStorage, writeStorage } from '../lib/storage.js';
 import { MOD_KEY } from '../lib/platform.js';
 import { TOUCH_QUERY, useMediaQuery } from '../hooks/useMediaQuery.js';
 import { runCompiledCode } from '../utils/codeRunner.js';
 
 // Binds Monaco to the room's shared Yjs document (the provider is owned by App) and runs code.
-// view: 'split' shows the editor with an optional output panel below (isOutputOpen); on
-// phones 'code' and 'output' show one of them full height. The editor stays mounted either way.
+// view: 'split' shows the editor with an optional console below (isOutputOpen); on phones
+// 'code' and 'output' show one of them full height. The editor stays mounted either way.
 export function EditorPane({
   room,
   provider,
@@ -27,7 +35,7 @@ export function EditorPane({
   const monacoRef = useRef(null);
   const runnerFrameRef = useRef(null);
   const lastRunRequestRef = useRef(0);
-  const resizeCleanupRef = useRef(null);
+  const runHadErrorRef = useRef(false);
   const paneRef = useRef(null);
   const [editor, setEditor] = useState(null);
   const subscribeToSync = useCallback((onChange) => provider.on('synced', onChange), [provider]);
@@ -35,57 +43,76 @@ export function EditorPane({
   const [runnerSource, setRunnerSource] = useState('');
   const [runnerKey, setRunnerKey] = useState(0);
   const [runOutput, setRunOutput] = useState([]);
-  const [outputHeight, setOutputHeight] = useState(250);
+  // { status: 'running' | 'success' | 'error', language, startedAt, duration?, exitCode? }
+  const [run, setRun] = useState(null);
+  const [outputHeight, setOutputHeightState] = useState(() => readStorage(OUTPUT_HEIGHT_KEY, DEFAULT_OUTPUT_HEIGHT));
+  const [paneHeight, setPaneHeight] = useState(0);
+
+  const setOutputHeight = useCallback((height) => {
+    setOutputHeightState(height);
+    writeStorage(OUTPUT_HEIGHT_KEY, height);
+  }, []);
 
   const appendRunOutput = useCallback((type, text) => {
-    setRunOutput((current) => [...current, { type, text }].slice(-60));
+    if (type === 'error') runHadErrorRef.current = true;
+    setRunOutput((current) => [...current, { type, text }].slice(-200));
   }, []);
 
-  const runNativeCode = useCallback(async (language, code) => {
-    const languageLabel =
-      language === 'cpp' ? 'C++' : language === 'python' ? 'Python' : language === 'typescript' ? 'TypeScript' : 'Java';
-    setRunOutput([{ type: 'muted', text: `Running ${languageLabel} in an isolated container...` }]);
-    try {
-      const result = await runCompiledCode(language, code);
-      const output = [
-        ...(result.stdout ? [{ type: 'log', text: result.stdout }] : []),
-        ...(result.stderr ? [{ type: 'error', text: result.stderr }] : []),
-      ];
-      setRunOutput(output.length > 0 ? output : [{ type: 'muted', text: 'Program completed with no output.' }]);
-    } catch (error) {
-      setRunOutput([{ type: 'error', text: error.message || 'The native code runner failed.' }]);
-    }
+  const finishRun = useCallback((status, details = {}) => {
+    setRun((current) =>
+      current?.status === 'running'
+        ? { ...current, status, duration: performance.now() - current.startedAt, ...details }
+        : current,
+    );
   }, []);
+
+  const runNativeCode = useCallback(
+    async (language, code) => {
+      const languageLabel = LANGUAGES.find(([value]) => value === language)?.[1] ?? language;
+      setRunOutput([{ type: 'muted', text: `Running ${languageLabel} in an isolated container…` }]);
+      try {
+        const result = await runCompiledCode(language, code);
+        const output = [
+          ...(result.stdout ? [{ type: 'log', text: result.stdout }] : []),
+          ...(result.stderr ? [{ type: 'error', text: result.stderr }] : []),
+        ];
+        setRunOutput(output.length > 0 ? output : [{ type: 'muted', text: 'Program completed with no output.' }]);
+        const exitCode = result.exitCode ?? (result.stderr ? 1 : 0);
+        finishRun(exitCode === 0 ? 'success' : 'error', { exitCode });
+      } catch (error) {
+        setRunOutput([{ type: 'error', text: error.message || 'The native code runner failed.' }]);
+        finishRun('error');
+      }
+    },
+    [finishRun],
+  );
 
   const runCurrentCode = useCallback(() => {
     onOutputVisibilityChange(true);
     const code = editorRef.current?.getValue() || '';
     if (!code.trim()) {
-      setRunOutput([{ type: 'muted', text: 'Nothing to run yet.' }]);
+      setRun(null);
+      setRunOutput([{ type: 'muted', text: 'Nothing to run yet. Write some code first.' }]);
       return;
     }
-
-    if (
-      room.language === 'java' ||
-      room.language === 'cpp' ||
-      room.language === 'python' ||
-      room.language === 'typescript'
-    ) {
-      runNativeCode(room.language, code);
-      return;
-    }
-
-    if (room.language !== 'javascript') {
+    if (!RUNNABLE.has(room.language)) {
+      setRun(null);
       setRunOutput([
         {
           type: 'error',
-          text: `Run Code supports JavaScript, TypeScript, Java, Python, and C++. ${room.language} is currently editor-only.`,
+          text: `Run supports JavaScript, TypeScript, Python, Java and C++. ${room.language} is editor-only.`,
         },
       ]);
       return;
     }
 
-    setRunOutput([{ type: 'muted', text: 'Running JavaScript in an isolated browser sandbox…' }]);
+    runHadErrorRef.current = false;
+    setRun({ status: 'running', language: room.language, startedAt: performance.now() });
+    if (room.language !== 'javascript') {
+      runNativeCode(room.language, code);
+      return;
+    }
+    setRunOutput([]);
     setRunnerSource(createRunnerDocument(code));
     setRunnerKey((current) => current + 1);
   }, [onOutputVisibilityChange, room.language, runNativeCode]);
@@ -100,13 +127,13 @@ export function EditorPane({
     function receiveRunnerMessage(event) {
       if (event.source !== runnerFrameRef.current?.contentWindow || event.data?.source !== 'collabcode-runner') return;
       const { type, text } = event.data;
-      if (type === 'done') return;
-      appendRunOutput(type === 'error' ? 'error' : 'log', text);
+      if (type === 'done') finishRun(runHadErrorRef.current ? 'error' : 'success');
+      else appendRunOutput(type === 'error' ? 'error' : 'log', text);
     }
 
     window.addEventListener('message', receiveRunnerMessage);
     return () => window.removeEventListener('message', receiveRunnerMessage);
-  }, [appendRunOutput]);
+  }, [appendRunOutput, finishRun]);
 
   useEffect(() => {
     if (!editor || !monacoRef.current) return undefined;
@@ -124,38 +151,19 @@ export function EditorPane({
     if (model && monacoRef.current) monacoRef.current.editor.setModelLanguage(model, room.language);
   }, [editor, room.language]);
 
+  // The console may take at most the pane's height minus room for a few lines of code.
   useEffect(() => {
-    if (editor) editor.layout();
-  }, [editor, isOutputOpen, outputHeight, view]);
+    const pane = paneRef.current;
+    if (!pane || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(([entry]) => setPaneHeight(entry.contentRect.height));
+    observer.observe(pane);
+    return () => observer.disconnect();
+  }, []);
 
   const showEditor = view !== 'output';
   const showOutput = view === 'output' || (view === 'split' && isOutputOpen);
-
-  useEffect(() => () => resizeCleanupRef.current?.(), []);
-
-  function startOutputResize(event) {
-    event.preventDefault();
-    const startY = event.clientY;
-    const startHeight = outputHeight;
-
-    function resize(moveEvent) {
-      const paneHeight = paneRef.current?.clientHeight || 0;
-      const maximumHeight = Math.max(140, paneHeight - 160);
-      const nextHeight = Math.min(maximumHeight, Math.max(120, startHeight + startY - moveEvent.clientY));
-      setOutputHeight(nextHeight);
-    }
-
-    function stopResize() {
-      window.removeEventListener('pointermove', resize);
-      window.removeEventListener('pointerup', stopResize);
-      resizeCleanupRef.current = null;
-    }
-
-    resizeCleanupRef.current?.();
-    resizeCleanupRef.current = stopResize;
-    window.addEventListener('pointermove', resize);
-    window.addEventListener('pointerup', stopResize, { once: true });
-  }
+  const maxOutputHeight = Math.max(MIN_OUTPUT_HEIGHT, paneHeight - 160);
+  const consoleHeight = paneHeight ? Math.min(outputHeight, maxOutputHeight) : outputHeight;
 
   function handleMount(instance, monaco) {
     editorRef.current = instance;
@@ -187,13 +195,14 @@ export function EditorPane({
         <Editor
           height="100%"
           defaultLanguage={room.language}
-          theme={theme === 'light' ? 'vs' : 'vs-dark'}
+          theme={EDITOR_THEMES[theme] ?? EDITOR_THEMES.dark}
           loading={<span className="sr-only">Loading the editor…</span>}
           onMount={handleMount}
           options={{
             automaticLayout: true,
             ariaLabel: 'Shared code editor. Press Alt+F1 for editor accessibility help.',
-            fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+            fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+            fontLigatures: true,
             fontSize,
             lineHeight: Math.round(fontSize * 1.7),
             minimap: { enabled: false },
@@ -201,7 +210,11 @@ export function EditorPane({
             scrollBeyondLastLine: false,
             smoothScrolling: true,
             cursorSmoothCaretAnimation: 'on',
+            cursorBlinking: 'smooth',
+            cursorWidth: 2,
+            guides: { indentation: true, bracketPairs: false },
             renderLineHighlight: 'all',
+            roundedSelection: true,
             tabSize: 2,
             // Touch screens: wrap long lines instead of scrolling sideways, drop the margins that
             // waste width, and use scrollbars large enough to grab with a finger.
@@ -210,8 +223,8 @@ export function EditorPane({
             glyphMargin: false,
             lineNumbersMinChars: isTouch ? 2 : 4,
             scrollbar: {
-              verticalScrollbarSize: isTouch ? 14 : 12,
-              horizontalScrollbarSize: isTouch ? 14 : 12,
+              verticalScrollbarSize: isTouch ? 14 : 10,
+              horizontalScrollbarSize: isTouch ? 14 : 10,
               alwaysConsumeMouseWheel: false,
             },
             // Typing before the shared code arrives would merge with it in surprising ways.
@@ -222,42 +235,80 @@ export function EditorPane({
       {isTouch && showEditor && editor && isSynced && <EditorKeyBar editor={editor} />}
       {showOutput && (
         <section
-          className="run-output"
-          style={view === 'split' ? { flexBasis: `${outputHeight}px` } : undefined}
-          aria-live="polite"
+          className="console"
+          id="code-output"
+          style={view === 'split' ? { flexBasis: `${consoleHeight}px` } : undefined}
           aria-label="Code output"
         >
           {view === 'split' && (
-            <div
-              className="output-resizer"
-              role="separator"
-              aria-label="Resize output panel"
-              aria-orientation="horizontal"
-              onPointerDown={startOutputResize}
+            <ResizeHandle
+              label="Resize output panel"
+              orientation="horizontal"
+              value={consoleHeight}
+              min={MIN_OUTPUT_HEIGHT}
+              max={maxOutputHeight}
+              invert
+              controls="code-output"
+              onChange={setOutputHeight}
+              onReset={() => setOutputHeight(DEFAULT_OUTPUT_HEIGHT)}
             />
           )}
-          <div className="run-output-heading">
-            <h2>Output</h2>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setRunOutput([])}
-              disabled={runOutput.length === 0}
-            >
-              Clear
-            </button>
+          <div className="console-header">
+            <h2 className="console-title">
+              <SquareTerminal size={14} aria-hidden="true" />
+              Output
+            </h2>
+            <RunStatus run={run} />
+            <div className="console-actions">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Eraser size={14} aria-hidden="true" />}
+                onClick={() => {
+                  setRunOutput([]);
+                  setRun(null);
+                }}
+                disabled={runOutput.length === 0 && !run}
+              >
+                Clear
+              </Button>
+              {view === 'split' && (
+                <IconButton label="Close output panel" size="sm" onClick={() => onOutputVisibilityChange(false)}>
+                  <X size={14} aria-hidden="true" />
+                </IconButton>
+              )}
+            </div>
           </div>
-          <pre>
-            {runOutput.length > 0 ? (
-              runOutput.map((line, index) => (
-                <code className={`output-${line.type}`} key={`${index}-${line.text}`}>
-                  {line.text}
-                  {'\n'}
-                </code>
-              ))
-            ) : (
-              <code className="output-muted">
-                Press Run or {MOD_KEY}+Enter to run the code. Output and errors appear here.
+          <pre className="console-body" aria-live="polite">
+            {run && (
+              <code className="console-line console-command">
+                <span className="console-prompt" aria-hidden="true">
+                  ❯
+                </span>{' '}
+                {getRunCommand(run.language)}
+                {'\n'}
+              </code>
+            )}
+            {runOutput.length > 0
+              ? runOutput.map((line, index) => (
+                  <code className={`console-line output-${line.type}`} key={`${index}-${line.text}`}>
+                    {line.text}
+                    {'\n'}
+                  </code>
+                ))
+              : !run && (
+                  <code className="console-line output-muted">
+                    Press Run or {MOD_KEY}+Enter to run the code. Output and errors appear here.
+                  </code>
+                )}
+            {run && run.status !== 'running' && (
+              <code className={`console-line console-exit is-${run.status}`}>
+                {run.status === 'success' ? (
+                  <CircleCheck size={14} aria-hidden="true" />
+                ) : (
+                  <CircleX size={14} aria-hidden="true" />
+                )}
+                {describeFinishedRun(run)}
               </code>
             )}
           </pre>
@@ -277,6 +328,37 @@ export function EditorPane({
   );
 }
 
+const OUTPUT_HEIGHT_KEY = 'collabcode-output-height';
+const DEFAULT_OUTPUT_HEIGHT = 260;
+const MIN_OUTPUT_HEIGHT = 120;
+const RUNNABLE = new Set(['javascript', 'typescript', 'python', 'java', 'cpp']);
+
+const formatDuration = (ms) => (ms < 1000 ? `${Math.max(1, Math.round(ms))} ms` : `${(ms / 1000).toFixed(2)} s`);
+
+function describeFinishedRun(run) {
+  const time = formatDuration(run.duration);
+  if (run.status === 'success') return `Finished in ${time}`;
+  return run.exitCode !== undefined ? `Exited with code ${run.exitCode} after ${time}` : `Failed after ${time}`;
+}
+
+// The badge in the console header: running, finished or failed.
+function RunStatus({ run }) {
+  if (!run) return null;
+  if (run.status === 'running') {
+    return (
+      <Badge tone="soft" className="run-status">
+        <Spinner />
+        Running
+      </Badge>
+    );
+  }
+  return (
+    <Badge tone={run.status === 'success' ? 'success' : 'danger'} dot className="run-status">
+      {run.status === 'success' ? 'Done' : 'Error'} · {formatDuration(run.duration)}
+    </Badge>
+  );
+}
+
 const RUNNER_WORKER_SOURCE = `
   const stringify = (value) => {
     if (typeof value === 'string') return value;
@@ -285,6 +367,14 @@ const RUNNER_WORKER_SOURCE = `
     try { return JSON.stringify(value, null, 2); } catch { return String(value); }
   };
   const send = (type, values = []) => postMessage({ type, text: values.map(stringify).join(' ') });
+  // The stack is mostly the sandbox's own frames; keep the message and where it happened in
+  // the user's code (eval reports it as <anonymous>:line:column).
+  const describeError = (error) => {
+    if (!(error instanceof Error)) return error;
+    const where = /<anonymous>:(\\d+):(\\d+)/.exec(error.stack || '');
+    const text = error.name + ': ' + error.message;
+    return where ? text + ' (line ' + where[1] + ', column ' + where[2] + ')' : text;
+  };
   for (const method of ['log', 'info', 'warn', 'error']) {
     console[method] = (...values) => send(method === 'error' ? 'error' : 'log', values);
   }
@@ -294,7 +384,7 @@ const RUNNER_WORKER_SOURCE = `
       const value = await Promise.resolve(result);
       if (value !== undefined) send('log', [value]);
     } catch (error) {
-      send('error', [error?.stack || error?.message || error]);
+      send('error', [describeError(error)]);
     } finally {
       send('done');
     }

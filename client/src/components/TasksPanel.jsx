@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, ListChecks, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { IconButton } from './ui/Button.jsx';
+import { EmptyState } from './ui/Feedback.jsx';
 import { MAX_TASK_LENGTH, MAX_TASKS } from '../hooks/useCollaboration.js';
 
 export function TasksPanel({ taskList, name }) {
@@ -62,15 +63,13 @@ export function TasksPanel({ taskList, name }) {
       )}
 
       {tasks.length === 0 ? (
-        <div className="empty-state">
-          <ListChecks size={28} aria-hidden="true" />
-          <strong>No tasks yet</strong>
-          <p>Write down what the room is working on. Everyone sees the same list.</p>
-        </div>
+        <EmptyState icon={ListChecks} title="No tasks yet">
+          Write down what the room is working on. Everyone sees the same list.
+        </EmptyState>
       ) : (
-        <ul className="task-list" aria-label="Tasks">
-          {tasks.map((task) => (
-            <li key={task.id} className={`task ${task.done ? 'is-done' : ''}`}>
+        <ul className="task-list stagger" aria-label="Tasks">
+          {tasks.map((task, index) => (
+            <li key={task.id} className={`task ${task.done ? 'is-done' : ''}`} style={{ '--i': index }}>
               {editingId === task.id ? (
                 <form
                   className="task-edit"
@@ -107,7 +106,7 @@ export function TasksPanel({ taskList, name }) {
                     <span className="task-text">{task.text}</span>
                   </label>
                   {task.createdBy && (
-                    <span className="task-owner" title={`Added by ${task.createdBy}`}>
+                    <span className="task-owner" data-tooltip={`Added by ${task.createdBy}`}>
                       {task.createdBy}
                     </span>
                   )}

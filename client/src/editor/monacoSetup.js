@@ -22,6 +22,7 @@ import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+import { registerEditorThemes } from './themes.js';
 
 // Language services run in web workers; each is only started when a file of that language opens.
 self.MonacoEnvironment = {
@@ -33,5 +34,12 @@ self.MonacoEnvironment = {
     return new EditorWorker();
   },
 };
+
+registerEditorThemes(monaco);
+// Load the code font now and measure again once it is in, in case Monaco measured the fallback.
+document.fonts
+  ?.load("14px 'JetBrains Mono Variable'")
+  .then(() => monaco.editor.remeasureFonts())
+  .catch(() => {});
 
 loader.config({ monaco });
