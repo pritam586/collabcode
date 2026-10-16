@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { Compass } from 'lucide-react';
 import { LandingPage } from './components/LandingPage.jsx';
 import { StatusPage, WorkspaceSkeleton } from './components/StatusPage.jsx';
 import { useTheme } from './hooks/usePreferences.js';
@@ -38,6 +39,8 @@ export default function App() {
   if (route.name === 'not-found') {
     return (
       <StatusPage
+        code="404"
+        icon={Compass}
         title="Page not found"
         message="There is nothing at this address. Start a new room or join one with an invite link."
         onAction={() => navigate('/')}

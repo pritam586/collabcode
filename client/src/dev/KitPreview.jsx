@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Copy, Inbox, Link2, MoreHorizontal, Play, Share2, Trash2, Type } from 'lucide-react';
+import { ArrowRight, CloudOff, Copy, Inbox, Link2, MoreHorizontal, Play, Share2, Trash2, Type } from 'lucide-react';
 import { Avatar, AvatarStack } from '../components/ui/Avatar.jsx';
 import { Button, IconButton } from '../components/ui/Button.jsx';
 import { Badge, EmptyState, Skeleton } from '../components/ui/Feedback.jsx';
@@ -13,7 +13,13 @@ import { Tabs } from '../components/ui/Tabs.jsx';
 import { TextField } from '../components/ui/TextField.jsx';
 import { useToast } from '../components/ui/useToast.js';
 import { ThemeToggle } from '../components/ThemeToggle.jsx';
+import { StatusPage, WorkspaceSkeleton } from '../components/StatusPage.jsx';
 import './kit.css';
+
+// Throws while rendering, to show the app's error page (the ErrorBoundary in main.jsx).
+function Crash() {
+  throw new Error('This is a test crash from the UI kit gallery.');
+}
 
 const PEOPLE = [
   { id: 1, name: 'Ada Lovelace', color: 'violet' },
@@ -32,6 +38,24 @@ export default function KitPreview({ themeControls }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [wrap, setWrap] = useState(true);
   const [view, setView] = useState('split');
+
+  // /__kit?page=… previews a full page that is hard to reach on purpose.
+  const page = new URLSearchParams(window.location.search).get('page');
+  if (page === 'crash') return <Crash />;
+  if (page === 'skeleton') return <WorkspaceSkeleton />;
+  if (page === 'join-failed') {
+    return (
+      <StatusPage
+        icon={CloudOff}
+        tone="danger"
+        title="You could not join this room"
+        message="Sample failure: the server could not let you into this room right now."
+        onAction={() => window.location.assign('/__kit')}
+      >
+        <Button variant="secondary">Try again</Button>
+      </StatusPage>
+    );
+  }
 
   return (
     <main className="kit">
@@ -219,6 +243,27 @@ export default function KitPreview({ themeControls }) {
             <strong>Glass card</strong>
             <p>Frosted surface for layers that float over content.</p>
           </div>
+        </div>
+      </section>
+
+      <section className="kit-section card">
+        <h2>Pages</h2>
+        <div className="kit-row">
+          <a className="btn btn-secondary" href="/nowhere">
+            404
+          </a>
+          <a className="btn btn-secondary" href="/r/not%20a%20room">
+            Invalid link
+          </a>
+          <a className="btn btn-secondary" href="/__kit?page=join-failed">
+            Join failed
+          </a>
+          <a className="btn btn-secondary" href="/__kit?page=skeleton">
+            Loading skeleton
+          </a>
+          <a className="btn btn-danger" href="/__kit?page=crash">
+            Crash page
+          </a>
         </div>
       </section>
 

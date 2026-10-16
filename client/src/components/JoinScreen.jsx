@@ -39,12 +39,12 @@ export function JoinScreen({ roomId, onJoin, onCancel, themeControls }) {
   return (
     <div className="join-screen">
       <AuroraBackdrop />
-      <header className="join-nav">
+      <header className="page-nav">
         <Logo />
         {themeControls && <ThemeToggle {...themeControls} />}
       </header>
 
-      <main className="join-main">
+      <main className="page-main">
         <section className="join-card glass" aria-labelledby="join-title">
           <p className="join-pill">
             <Link2 size={14} aria-hidden="true" />
