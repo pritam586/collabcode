@@ -46,6 +46,14 @@ describe('LandingPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Paste an invite link or a room code');
   });
 
+  test('the animated product preview is one labelled image for screen readers', () => {
+    renderLanding();
+    const preview = screen.getByRole('img', { name: /Preview of a CollabCode room/ });
+    expect(preview).toBeInTheDocument();
+    // The decorative avatars and buttons inside it are not exposed separately.
+    expect(screen.queryByRole('button', { name: 'Run' })).not.toBeInTheDocument();
+  });
+
   test('requires a name', async () => {
     const { navigate, user } = renderLanding();
     await user.clear(screen.getByLabelText('Your name'));

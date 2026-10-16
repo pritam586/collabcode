@@ -140,7 +140,12 @@ export default function KitPreview({ themeControls }) {
           onSelect={setTab}
           tabs={[
             { id: 'people', label: 'People', badge: <Badge>3</Badge>, content: <p className="kit-pad">People</p> },
-            { id: 'chat', label: 'Chat', badge: <Badge tone="brand">2</Badge>, content: <p className="kit-pad">Chat</p> },
+            {
+              id: 'chat',
+              label: 'Chat',
+              badge: <Badge tone="brand">2</Badge>,
+              content: <p className="kit-pad">Chat</p>,
+            },
             { id: 'tasks', label: 'Tasks', content: <p className="kit-pad">Tasks</p> },
           ]}
         />

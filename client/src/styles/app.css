@@ -8,21 +8,12 @@
   font-size: var(--text-base);
   font-weight: var(--weight-bold);
   gap: var(--space-2);
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-tight);
 }
-.brand-mark {
-  align-items: center;
-  background: var(--color-accent);
-  border-radius: var(--radius-sm);
-  color: var(--color-on-accent);
-  display: inline-flex;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  height: 28px;
-  justify-content: center;
-  letter-spacing: -0.12em;
-  width: 28px;
+.logo-mark {
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(79, 70, 229, 0.35));
+  flex-shrink: 0;
 }
 .brand-button {
   background: transparent;
@@ -35,154 +26,6 @@
 }
 .workspace.is-compact .brand-button {
   padding: 0;
-}
-
-/* Landing page */
-.landing {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
-}
-.landing-nav {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-  margin: 0 auto;
-  max-width: 1120px;
-  padding: var(--space-4) var(--space-4) 0;
-  width: 100%;
-}
-.landing-main {
-  display: grid;
-  gap: var(--space-12) var(--space-10);
-  grid-template-areas: 'hero' 'start' 'features' 'how';
-  margin: 0 auto;
-  max-width: 1120px;
-  padding: var(--space-10) var(--space-4) var(--space-12);
-  width: 100%;
-}
-.hero {
-  align-self: center;
-  grid-area: hero;
-}
-.eyebrow {
-  color: var(--color-accent-text);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.12em;
-  margin-bottom: var(--space-4);
-  text-transform: uppercase;
-}
-.hero h1 {
-  font-size: var(--text-display);
-  letter-spacing: -0.04em;
-  line-height: var(--leading-tight);
-}
-.hero h1 span {
-  color: var(--color-accent-text);
-}
-.hero-copy {
-  color: var(--color-text-muted);
-  font-size: var(--text-lg);
-  line-height: var(--leading-relaxed);
-  margin-top: var(--space-5);
-  max-width: 56ch;
-}
-.start-card {
-  align-self: start;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-  display: grid;
-  gap: var(--space-4);
-  grid-area: start;
-  padding: var(--space-6);
-}
-.join-form {
-  display: grid;
-  gap: var(--space-3);
-}
-.divider {
-  align-items: center;
-  color: var(--color-text-muted);
-  display: flex;
-  font-size: var(--text-xs);
-  gap: var(--space-3);
-  text-transform: uppercase;
-}
-.divider::before,
-.divider::after {
-  background: var(--color-border);
-  content: '';
-  flex: 1;
-  height: 1px;
-}
-.features {
-  grid-area: features;
-}
-.feature-grid {
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.feature {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-}
-.feature svg {
-  color: var(--color-accent-text);
-}
-.feature h3 {
-  font-size: var(--text-base);
-  margin: var(--space-3) 0 var(--space-1);
-}
-.feature p {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-.how-it-works {
-  grid-area: how;
-}
-.how-it-works h2 {
-  font-size: var(--text-xl);
-  margin-bottom: var(--space-4);
-}
-.how-it-works ol {
-  color: var(--color-text-muted);
-  display: grid;
-  gap: var(--space-3);
-  margin: 0;
-  padding-left: var(--space-5);
-}
-.how-it-works strong {
-  color: var(--color-text);
-}
-.how-it-works code {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-}
-.landing-footer {
-  border-top: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  margin-top: auto;
-  padding: var(--space-5) var(--space-4);
-  text-align: center;
-}
-
-@media (min-width: 900px) {
-  .landing-main {
-    grid-template-areas: 'hero start' 'features features' 'how how';
-    grid-template-columns: minmax(0, 1.25fr) minmax(320px, 400px);
-    padding-top: var(--space-16);
-  }
 }
 
 /* Full-page messages */
@@ -1109,7 +952,6 @@
 
 /* Phones (< 768px) */
 @media (max-width: 767px) {
-  .brand-name,
   .hide-narrow {
     clip: rect(0, 0, 0, 0);
     clip-path: inset(50%);
@@ -1128,14 +970,5 @@
   }
   .header-start {
     flex: 1;
-  }
-  .start-card {
-    padding: var(--space-5);
-  }
-  .landing-main {
-    padding-top: var(--space-6);
-  }
-  .hero-copy {
-    font-size: var(--text-base);
   }
 }

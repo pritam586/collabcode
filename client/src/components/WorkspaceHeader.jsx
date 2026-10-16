@@ -18,6 +18,7 @@ import { MOD_KEY } from '../lib/platform.js';
 import { Popover } from './ui/Popover.jsx';
 import { Select } from './ui/Select.jsx';
 import { ThemeToggle } from './ThemeToggle.jsx';
+import { LogoMark } from './Logo.jsx';
 import { LANGUAGES } from '../constants/languages.js';
 import { FONT_SIZES } from '../hooks/usePreferences.js';
 
@@ -72,11 +73,10 @@ export function WorkspaceHeader({
           className="brand brand-button"
           onClick={onLeave}
           aria-label="CollabCode home (leaves this room)"
-          title="Back to home"
+          data-tooltip="Back to home"
+          data-tooltip-placement="bottom"
         >
-          <span className="brand-mark" aria-hidden="true">
-            &lt;/&gt;
-          </span>
+          <LogoMark />
           {!compact && <span className="brand-name">CollabCode</span>}
         </button>
         <div className="room-chip">

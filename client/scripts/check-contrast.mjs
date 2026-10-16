@@ -32,6 +32,13 @@ const pairs = [
   ['color-on-brand', 'brand-violet-strong', TEXT],
   ['color-on-brand', 'brand-blue-strong', TEXT],
   ['color-on-brand', 'brand-cyan-strong', TEXT],
+  // Code on the editor surface (the landing mockup and Monaco).
+  ...['text', 'comment', 'keyword', 'function', 'string', 'number', 'property', 'punctuation'].map((role) => [
+    `syntax-${role}`,
+    'editor-bg',
+    TEXT,
+  ]),
+  ['editor-gutter', 'editor-bg', UI],
   // Tooltips invert the page colors.
   ['color-bg', 'color-text', TEXT],
   ['color-info', 'color-surface', TEXT],
@@ -57,7 +64,7 @@ const pairs = [
   ]),
 ].map(([foreground, background, minimum]) => [
   foreground,
-  /^(color|presence|brand)-/.test(background) ? background : `color-${background}`,
+  /^(color|presence|brand|editor)-/.test(background) ? background : `color-${background}`,
   minimum,
 ]);
 
