@@ -19,6 +19,8 @@ import { TextField } from './ui/TextField.jsx';
 import { ThemeToggle } from './ThemeToggle.jsx';
 import { Logo } from './Logo.jsx';
 import { EditorMockup } from './landing/EditorMockup.jsx';
+import { AuroraBackdrop } from './AuroraBackdrop.jsx';
+import { RoomCodeField } from './RoomCodeField.jsx';
 import { generateRoomId, parseRoomInput, randomGuestName, roomPath } from '../lib/rooms.js';
 import { readSavedName, saveName } from '../hooks/usePreferences.js';
 
@@ -112,15 +114,7 @@ export function LandingPage({ navigate, themeControls, onPrepareRoom }) {
 
   return (
     <div className="landing">
-      <div className="landing-backdrop" aria-hidden="true">
-        <div className="aurora">
-          <span className="aurora-blob aurora-blob-1" />
-          <span className="aurora-blob aurora-blob-2" />
-          <span className="aurora-blob aurora-blob-3" />
-        </div>
-        <div className="texture-dots" />
-        <div className="texture-grain" />
-      </div>
+      <AuroraBackdrop />
 
       <header className="landing-nav">
         <a className="landing-home" href="/" aria-label="CollabCode home">
@@ -180,18 +174,11 @@ export function LandingPage({ navigate, themeControls, onPrepareRoom }) {
             </div>
 
             <form className="join-form" onSubmit={joinRoom} onFocus={onPrepareRoom} noValidate>
-              <TextField
-                label="Room code or invite link"
-                placeholder="swift-otter-4821"
-                size="lg"
-                mono
+              <RoomCodeField
                 value={joinCode}
-                autoComplete="off"
-                autoCapitalize="none"
-                spellCheck={false}
                 error={joinError}
-                onChange={(event) => {
-                  setJoinCode(event.target.value);
+                onChange={(value) => {
+                  setJoinCode(value);
                   setJoinError('');
                 }}
                 action={

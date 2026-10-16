@@ -60,17 +60,8 @@
 }
 
 /* Dialog content */
-.dialog-form {
-  display: grid;
-  gap: var(--space-4);
-}
 .dialog-copy {
   color: var(--color-text-muted);
-}
-.room-code {
-  color: var(--color-text);
-  font-family: var(--font-mono);
-  overflow-wrap: anywhere;
 }
 
 /* Loading skeleton */
@@ -971,4 +962,17 @@
   .header-start {
     flex: 1;
   }
+}
+
+/* Share dialog */
+.share-room {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.share-room code {
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text);
+  padding: 1px 6px;
 }

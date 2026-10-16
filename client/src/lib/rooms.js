@@ -75,6 +75,15 @@ export function parseRoomInput(input) {
   return ROOM_ID_PATTERN.test(candidate) ? candidate : null;
 }
 
+export const looksLikeLink = (value) => /[/:]/.test(value);
+
+// Spaces become dashes as you type ("swift otter 4821" -> "swift-otter-4821"). Nothing else is
+// rewritten: codes are case-sensitive and may contain dots and underscores. Links are left
+// alone while typing.
+export function formatRoomCode(value) {
+  return looksLikeLink(value) ? value : value.replace(/^\s+/, '').replace(/\s+/g, '-');
+}
+
 export function roomPath(roomId) {
   return `/r/${encodeURIComponent(roomId)}`;
 }

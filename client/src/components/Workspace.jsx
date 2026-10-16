@@ -5,6 +5,7 @@ import { MobileNav } from './MobileNav.jsx';
 import { OnboardingTour } from './OnboardingTour.jsx';
 import { ParticipantsPanel } from './ParticipantsPanel.jsx';
 import { ShareDialog } from './ShareDialog.jsx';
+import { writeToClipboard } from '../lib/clipboard.js';
 import { ShortcutsDialog } from './ShortcutsDialog.jsx';
 import { Sidebar } from './Sidebar.jsx';
 import { StatusBar } from './StatusBar.jsx';
@@ -76,10 +77,9 @@ export function Workspace({ roomId, name, session, navigate, themeControls }) {
       ).length;
 
   const share = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(roomUrl(roomId));
+    if (await writeToClipboard(roomUrl(roomId))) {
       toast.success('Invite link copied. Send it to anyone you want to code with.');
-    } catch {
+    } else {
       // Clipboard access can be blocked (insecure origin, permissions). Show the link instead.
       setShareOpen(true);
     }

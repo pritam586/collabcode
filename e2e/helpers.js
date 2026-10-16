@@ -13,9 +13,9 @@ export async function createRoom(page, name) {
 // Opens an invite link and answers the name prompt.
 export async function joinRoom(page, path, name) {
   await page.goto(path);
-  const dialog = page.getByRole('dialog', { name: 'Join this room' });
-  await dialog.getByLabel('Your name').fill(name);
-  await dialog.getByRole('button', { name: 'Join room' }).click();
+  const card = page.getByRole('region', { name: 'Join this room' });
+  await card.getByLabel('Your name').fill(name);
+  await card.getByRole('button', { name: 'Join room' }).click();
   await waitForEditor(page);
 }
 

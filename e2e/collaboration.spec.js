@@ -68,7 +68,7 @@ test('the code is still there after reloading', async ({ page, browser }) => {
   await page.reload();
 
   // The display name usually survives the reload in history state; if not, answer the prompt.
-  const prompt = page.getByRole('dialog', { name: 'Join this room' });
+  const prompt = page.getByRole('region', { name: 'Join this room' });
   await expect(prompt.or(page.locator('.monaco-editor'))).toBeVisible();
   if (await prompt.isVisible()) await prompt.getByRole('button', { name: 'Join room' }).click();
   await expect(editorText(page)).toContainText('let kept = true;');

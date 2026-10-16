@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { JoinDialog } from './JoinDialog.jsx';
+import { JoinScreen } from './JoinScreen.jsx';
 import { StatusPage, WorkspaceSkeleton } from './StatusPage.jsx';
 import { Workspace } from './Workspace.jsx';
 import { useRoomSession } from '../hooks/useRoomSession.js';
@@ -19,12 +19,7 @@ export function RoomScreen({ roomId, initialName, navigate, themeControls }) {
     );
   }
   if (!name) {
-    return (
-      <>
-        <WorkspaceSkeleton caption={null} />
-        <JoinDialog roomId={roomId} onJoin={setName} onCancel={() => navigate('/')} />
-      </>
-    );
+    return <JoinScreen roomId={roomId} onJoin={setName} onCancel={() => navigate('/')} themeControls={themeControls} />;
   }
   return (
     <RoomSession

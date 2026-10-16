@@ -135,6 +135,36 @@
   color: var(--color-text);
 }
 
+/* Copy button: the two labels share one grid cell, so the width never changes as they swap. */
+.copy-labels {
+  display: inline-grid;
+}
+.copy-labels > * {
+  grid-area: 1 / 1;
+  text-align: start;
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
+}
+.copy-labels > [aria-hidden='true'] {
+  opacity: 0;
+  transform: translateY(5px);
+}
+.copy-labels > :first-child[aria-hidden='true'] {
+  transform: translateY(-5px);
+}
+.copy-icon {
+  display: inline-flex;
+}
+.copy-btn.is-copied .copy-icon svg {
+  animation: icon-pop var(--duration-slow) var(--ease-spring);
+}
+.copy-btn.is-copied:not(.btn-primary) {
+  background: var(--color-success-soft);
+  border-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+  color: var(--color-success);
+}
+
 /* Icon-only button: always has an aria-label, shown as a tooltip. */
 .icon-btn {
   align-items: center;
@@ -205,6 +235,18 @@
 }
 .field-hint {
   color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.field-hint-success {
+  align-items: center;
+  animation: fade-up var(--duration-normal) var(--ease-out);
+  color: var(--color-success);
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.field-hint-success code {
+  color: var(--color-text);
   font-size: var(--text-xs);
 }
 .field-error {
@@ -997,6 +1039,12 @@ textarea.input {
   to {
     opacity: 0;
     transform: translateX(24px) scale(0.98);
+  }
+}
+@keyframes icon-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-20deg);
   }
 }
 @keyframes fade-in {
